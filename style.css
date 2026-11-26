@@ -307,7 +307,9 @@ body {
     box-shadow: 0 4px 8px rgba(0,0,0,0.8);
     transition: transform 0.1s ease;
     border-radius: 6px;
+    touch-action: none; /* ★ 新增：防止手機拖曳時被頁面捲動搶走 */
 }
+function enterPoemPuzzle
 .passport-item:active {
     cursor: grabbing;
     transform: scale(1.1);

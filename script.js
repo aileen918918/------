@@ -2292,10 +2292,13 @@ function enterPoemPuzzle(isBack = false) {
         setTimeout(() => { createPieces(); }, 100);
         poemPuzzleInitialized = true;
     } else {
-        window.dispatchEvent(new Event('resize'));
+        // ★ 修正：等場景完全顯示後再重新對齊所有已就位與未就位方塊，確保保留進度
+        setTimeout(() => {
+            document.getElementById("piece-counter").innerText = `${lockedPieces.size} / 10`;
+            window.dispatchEvent(new Event('resize'));
+        }, 60);
     }
 }
-
 function initPoemGrid() {
     const grid = document.getElementById("poem-grid");
     grid.innerHTML = "";
@@ -2355,10 +2358,15 @@ function positionInTray(el, pieceDef, animated = true) {
     const scene = document.getElementById("scene-poem-puzzle");
     const tRect = tray.getBoundingClientRect();
     const sRect = scene.getBoundingClientRect();
+
+    // ★ 手機螢幕較窄時，自動依比例縮放托盤內的 X 座標，避免方塊超出右邊界
+    const scaleX = tRect.width < 420 ? (tRect.width - 110) / 310 : 1;
+
     if (animated) el.style.transition = "left 0.25s ease-out, top 0.25s ease-out";
     else el.style.transition = "none";
-    el.style.left = `${tRect.left - sRect.left + pieceDef.trayPos.x}px`;
-    el.style.top = `${tRect.top - sRect.top + pieceDef.trayPos.y}px`;
+
+    el.style.left = `${tRect.left - sRect.left + scene.scrollLeft + pieceDef.trayPos.x * scaleX}px`;
+    el.style.top = `${tRect.top - sRect.top + scene.scrollTop + pieceDef.trayPos.y}px`;
     el.classList.remove("piece-docked");
     if (animated) setTimeout(() => { el.style.transition = "none"; }, 250);
 }
@@ -2369,8 +2377,13 @@ function getTargetLocalPos(pieceDef) {
     if (!anchorCell || !scene) return null;
     const aRect = anchorCell.getBoundingClientRect();
     const sRect = scene.getBoundingClientRect();
-    return { x: aRect.left - sRect.left, y: aRect.top - sRect.top };
+    // ★ 加上 scrollLeft / scrollTop，解決手機捲動後對不到格子的問題
+    return {
+        x: aRect.left - sRect.left + scene.scrollLeft,
+        y: aRect.top - sRect.top + scene.scrollTop
+    };
 }
+
 
 function makeDraggable(el, pieceDef) {
     let isDragging = false;
@@ -2424,7 +2437,7 @@ function checkSnap(el, pieceDef) {
     const curLeft = el.offsetLeft;
     const curTop = el.offsetTop;
     const dist = Math.hypot(curLeft - targetPos.x, curTop - targetPos.y);
-    if (dist < 32) { 
+    if (dist < 48) { // ★ 吸附距離從 32 放寬到 48，手機手指拖曳更好對準
         lockedPieces.add(pieceDef.id);
         el.style.transition = "left 0.15s ease-out, top 0.15s ease-out";
         el.style.left = `${targetPos.x}px`;
@@ -2552,8 +2565,9 @@ function positionXieInTray(el, orderIndex, animated = true) {
     if (animated) el.style.transition = "left 0.25s ease-out, top 0.25s ease-out";
     else el.style.transition = "none";
 
-    el.style.left = `${tRect.left - sRect.left + orderIndex * sectionWidth + offsetX}px`;
-    el.style.top = `${tRect.top - sRect.top + offsetY}px`;
+    // ★ 加上 scrollLeft / scrollTop
+    el.style.left = `${tRect.left - sRect.left + scene.scrollLeft + orderIndex * sectionWidth + offsetX}px`;
+    el.style.top = `${tRect.top - sRect.top + scene.scrollTop + offsetY}px`;
 
     if (animated) setTimeout(() => { el.style.transition = "none"; }, 250);
 }
@@ -2565,8 +2579,13 @@ function getXieTargetLocalPos(slotIndex) {
     
     const aRect = slot.getBoundingClientRect();
     const sRect = scene.getBoundingClientRect();
-    return { x: aRect.left - sRect.left, y: aRect.top - sRect.top };
+    // ★ 加上 scrollLeft / scrollTop
+    return {
+        x: aRect.left - sRect.left + scene.scrollLeft,
+        y: aRect.top - sRect.top + scene.scrollTop
+    };
 }
+
 
 function makeXieDraggable(el, id) {
     let isDragging = false;
@@ -2641,7 +2660,7 @@ function checkXieSnap(el, id) {
     const curTop = el.offsetTop;
     
     let snappedSlot = -1;
-    let minDistance = 50; 
+    let minDistance = 75; // ★ 吸附距離從 50 放寬到 75，手機拖進格子更順手
 
     for (let i = 0; i < 5; i++) {
         const targetPos = getXieTargetLocalPos(i);

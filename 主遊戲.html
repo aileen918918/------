@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解鎖失落藝隅</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;600;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ★ 新增：恐怖特效動畫 ★ */
+        @keyframes text-rush {
+            0% { transform: scale(0.2); opacity: 0; color: #5a3c28; }
+            30% { opacity: 1; color: #8b0000; text-shadow: 0 0 10px rgba(139,0,0,0.8); }
+            75% { transform: scale(3.5); opacity: 1; color: #ff0000; text-shadow: 0 0 30px rgba(255,0,0,1); }
+            100% { transform: scale(6); opacity: 0; filter: blur(10px); }
+        }
+        .animate-text-rush {
+            animation: text-rush 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes violent-shake {
+            0%, 100% { transform: translate(0, 0) rotate(0); }
+            10% { transform: translate(-15px, 15px) rotate(-3deg); filter: contrast(150%) saturate(150%); }
+            20% { transform: translate(15px, -10px) rotate(3deg); filter: invert(10%); }
+            30% { transform: translate(-10px, -15px) rotate(-1deg); }
+            40% { transform: translate(15px, 15px) rotate(2deg); filter: contrast(120%) hue-rotate(-20deg); }
+            50% { transform: translate(-15px, 10px) rotate(-3deg); }
+            60% { transform: translate(10px, -15px) rotate(3deg); }
+            70% { transform: translate(-15px, -10px) rotate(-2deg); }
+            80% { transform: translate(15px, 15px) rotate(1deg); filter: contrast(150%); }
+            90% { transform: translate(-10px, 10px) rotate(-3deg); }
+        }
+        .shake-violent {
+            animation: violent-shake 0.3s infinite !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- ★ 新增：全螢幕恐怖特效層 ★ -->
+    <div id="horror-layer" class="absolute inset-0 z-[500] hidden pointer-events-none flex items-center justify-center overflow-hidden">
+	<!-- ★ 新增：序章地圖疊合後的黑畫面浮字層 ★ -->
+    <div id="prologue-black-screen" class="absolute inset-0 z-[480] bg-black hidden opacity-0 transition-opacity duration-700 flex flex-col items-center justify-center px-8 text-center">
+        <div id="prologue-black-lines" class="space-y-6 text-2xl md:text-4xl font-bold tracking-widest text-[#e2cda6] font-serif leading-relaxed"></div>
+    </div>
+        <!-- 壓迫感黑底 -->
+        <div id="horror-bg" class="absolute inset-0 bg-black opacity-0 transition-opacity duration-300"></div>
+        
+        <!-- 衝向鏡頭的字體 -->
+        <div id="horror-text" class="relative z-10 text-6xl md:text-8xl font-black text-center opacity-0" style="font-family: 'Noto Serif TC', serif;"></div>
+        
+        <!-- 碎玻璃 SVG 疊加層 -->
+        <div id="glass-shatter-overlay" class="absolute inset-0 hidden mix-blend-screen">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="absolute inset-0 w-full h-full opacity-80">
+                <path d="M50 50 L0 0 M50 50 L25 0 M50 50 L75 0 M50 50 L100 0 M50 50 L100 35 M50 50 L100 75 M50 50 L80 100 M50 50 L35 100 M50 50 L0 100 M50 50 L0 60" stroke="#ffffff" stroke-width="0.5" fill="none"/>
+                <path d="M35 35 L40 30 L50 25 L60 30 L65 35 L70 50 L65 65 L60 70 L50 75 L40 70 L35 65 L30 50 Z" stroke="#ffffff" stroke-width="0.3" fill="none"/>
+                <polygon points="50,50 60,30 70,50" fill="rgba(255,255,255,0.15)"/>
+                <polygon points="50,50 40,70 30,50" fill="rgba(255,255,255,0.15)"/>
+            </svg>
+            <div class="absolute inset-0 backdrop-blur-[2px]"></div>
+        </div>
+    </div>
+
+    <!-- 固定 UI 列 -->
+    <div id="ui-layer" class="absolute top-4 w-full px-4 z-20 flex justify-between items-start hidden">
+        <div class="flex gap-4">
+            <button id="btn-back" onclick="goBack()" class="ui-btn px-4 py-2 rounded font-bold text-lg hidden">
+                <i class="fas fa-arrow-left mr-2"></i>返回
+            </button>
+            <button id="btn-home" onclick="goHome()" class="ui-btn px-4 py-2 rounded font-bold text-lg hidden">
+                <i class="fas fa-home mr-2"></i>首頁
+            </button>
+            <button id="btn-next-chapter" onclick="goNextChapter()" class="ui-btn px-4 py-2 rounded font-bold text-lg hidden border border-amber-500/70 text-amber-200">
+                下一章<i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <div id="timer-container" class="flex flex-col items-center bg-stone-900/80 border-2 border-[#5a3c28] rounded px-4 py-1">
+            <span class="text-[#e2cda6] font-bold text-sm mb-1">剩餘時間</span>
+            <div class="w-48 h-4 bg-stone-800 rounded-full overflow-hidden border border-stone-600">
+                <div id="timer-bar" class="h-full bg-amber-600 transition-all duration-1000 w-full"></div>
+            </div>
+            <span id="timer-text" class="text-amber-100 font-mono text-sm mt-1">60:00</span>
+			<div id="timer-container" class="flex flex-col items-center bg-stone-900/80 border-2 border-[#5a3c28] rounded px-4 py-1 hidden"></div>
+        </div>
+
+        <div class="flex gap-4">
+            <button id="btn-music" onclick="toggleMusic()" class="ui-btn px-4 py-2 rounded font-bold text-lg relative">
+                <i id="music-icon" class="fas fa-volume-up"></i>
+            </button>
+            <button onclick="toggleModal('notebook-modal')" class="ui-btn px-4 py-2 rounded font-bold text-lg relative">
+                <i class="fas fa-book mr-2"></i>筆記本 <span id="notebook-count" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+            <button onclick="toggleModal('inventory-modal')" class="ui-btn px-4 py-2 rounded font-bold text-lg relative">
+                <i class="fas fa-briefcase mr-2"></i>道具欄 <span id="inventory-count" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+        </div>
+		
+    </div>
+	
+<!-- ★ 王香禪拼圖進度顯示元件 ★ -->
+    <div id="portrait-progress-widget" onclick="togglePortraitZoom()" class="hidden" title="點擊放大／縮小查看拼圖">
+        <div class="portrait-frame">
+            <img src="王香禪.png" alt="王香禪拼圖" class="w-full h-full object-cover">
+            <div id="portrait-mask-grid" class="portrait-mask-grid">
+                <div class="portrait-mask-tile" data-tile="0"></div>
+                <div class="portrait-mask-tile" data-tile="1"></div>
+                <div class="portrait-mask-tile" data-tile="2"></div>
+                <div class="portrait-mask-tile" data-tile="3"></div>
+                <div class="portrait-mask-tile" data-tile="4"></div>
+                <div class="portrait-mask-tile" data-tile="5"></div>
+                <div class="portrait-mask-tile" data-tile="6"></div>
+                <div class="portrait-mask-tile" data-tile="7"></div>
+                <div class="portrait-mask-tile" data-tile="8"></div>
+            </div>
+        </div>
+        <div id="portrait-progress-label" class="portrait-progress-label">
+            尋找「她」 0 / 9
+        </div>
+    </div>
+    <!-- 解鎖特效遮罩 -->
+    <div id="unlock-effect" class="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-1000 hidden">
+        <div class="absolute inset-0 bg-white/90"></div>
+    </div>
+
+    <!-- ★ 最終章破關：時空重置特效層 ★ -->
+    <div id="time-reset-overlay" class="absolute inset-0 z-[450] hidden pointer-events-none flex flex-col items-center justify-center bg-black opacity-0 transition-opacity duration-700">
+        <div id="time-reset-year" class="text-6xl md:text-8xl font-mono font-black text-amber-200 tracking-[0.2em] drop-shadow-[0_0_30px_rgba(251,191,36,0.9)]">1935</div>
+        <div id="time-reset-sub" class="mt-4 text-lg md:text-2xl text-amber-100/90 tracking-[0.4em] font-bold">時空重置中……</div>
+    </div>
+
+    <!-- 遊戲封面 -->
+    <div id="scene-home" class="scene active">
+        <h1 class="text-6xl font-bold mb-8 title-glow tracking-widest text-[#e2cda6]">解鎖失落藝隅</h1>
+        
+        <div class="flex flex-col items-center gap-6">
+            <!-- 兩大路徑選擇 -->
+            <div id="path-selection" class="flex flex-col md:flex-row justify-center gap-6">
+                <button onclick="startFullGame()" class="ui-btn px-8 py-3 rounded-full text-2xl font-bold tracking-widest hover:text-white shadow-lg border-2 border-amber-600/50">
+                    完整體驗遊戲
+                </button>
+                <button onclick="startChapterSelect()" class="ui-btn px-8 py-3 rounded-full text-2xl font-bold tracking-widest hover:text-white shadow-lg border-2 border-amber-600/50">
+                    選擇想體驗的章節關卡
+                </button>
+            </div>
+            
+            <!-- 存檔延續選項 (選擇完整體驗且有進度時顯示) -->
+            <div id="save-options" class="flex flex-col md:flex-row justify-center gap-6 hidden">
+                <button id="btn-continue" onclick="continueGame()" class="ui-btn px-8 py-3 rounded-full text-xl font-bold tracking-widest hover:text-white">
+                    延續上一次進度
+                </button>
+                <button id="btn-restart" onclick="restartGame()" class="ui-btn px-8 py-3 rounded-full text-xl font-bold tracking-widest hover:text-white">
+                    重新開始遊戲
+                </button>
+                <button onclick="backToPathSelection()" class="ui-btn px-8 py-3 rounded-full text-xl font-bold tracking-widest hover:text-white" style="background: linear-gradient(to bottom, #7f1d1d, #450a0a); border-color: #b91c1c;">
+                    返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 章節選擇頁 -->
+    <div id="scene-level-select" class="scene">
+        <h2 class="text-5xl font-bold mb-10 title-glow tracking-widest text-[#e2cda6]">選擇章節</h2>
+        <div class="flex flex-wrap justify-center gap-6 w-full max-w-6xl px-8">
+            <div id="btn-level-1" class="level-card relative bg-[#d4b886] border-4 border-[#5a3c28] rounded-xl w-40 md:w-48 h-56 flex flex-col items-center justify-center cursor-pointer" onclick="startLevel(1)">
+                <span class="text-3xl font-bold text-[#3e2723] mb-2">序章</span>
+                <span id="room-name-1" class="text-lg font-bold text-[#5a3c28] hidden">時空交錯</span>
+                <div class="lock-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-5xl text-gray-400"></i></div>
+            </div>
+            <div id="btn-level-2" class="level-card locked relative bg-[#d4b886] border-4 border-[#5a3c28] rounded-xl w-40 md:w-48 h-56 flex flex-col items-center justify-center cursor-pointer" onclick="startLevel(2)">
+                <span class="text-3xl font-bold text-[#3e2723] mb-2">第一章</span>
+                <span id="room-name-2" class="text-lg font-bold text-[#5a3c28] hidden">寶美樓</span>
+                <div class="lock-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-5xl text-gray-400"></i></div>
+            </div>
+            <div id="btn-level-3" class="level-card locked relative bg-[#d4b886] border-4 border-[#5a3c28] rounded-xl w-40 md:w-48 h-56 flex flex-col items-center justify-center cursor-pointer" onclick="startLevel(3)">
+                <span class="text-3xl font-bold text-[#3e2723] mb-2">第二章</span>
+                <span id="room-name-3" class="text-lg font-bold text-[#5a3c28] hidden">江山樓</span>
+                <div class="lock-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-5xl text-gray-400"></i></div>
+            </div>
+            <div id="btn-level-4" class="level-card locked relative bg-[#d4b886] border-4 border-[#5a3c28] rounded-xl w-40 md:w-48 h-56 flex flex-col items-center justify-center cursor-pointer" onclick="startLevel(4)">
+                <span class="text-3xl font-bold text-[#3e2723] mb-2">第三章</span>
+                <span id="room-name-4" class="text-lg font-bold text-[#5a3c28] hidden">藝旦間</span>
+                <div class="lock-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-5xl text-gray-400"></i></div>
+            </div>
+            <div id="btn-level-5" class="level-card locked relative bg-[#d4b886] border-4 border-[#5a3c28] rounded-xl w-40 md:w-48 h-56 flex flex-col items-center justify-center cursor-pointer" onclick="startLevel(5)">
+                <span class="text-3xl font-bold text-[#3e2723] mb-2">最終章</span>
+                <span id="room-name-5" class="text-lg font-bold text-[#5a3c28] hidden">未完待續</span>
+                <div class="lock-overlay absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-5xl text-gray-400"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="scene-cafe" class="scene"></div>
+    <div id="scene-wedding" class="scene">
+        <div id="falling-letter" class="absolute hidden" style="left: 18%; top: 40%; z-index: 10;">
+            <div class="w-16 h-20 bg-[#e8dcb8] border border-[#5a3c28] shadow-lg flex items-center justify-center">
+                <i class="fas fa-envelope text-[#5a3c28] text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- 地圖疊合解謎場景 -->
+    <div id="scene-map-puzzle" class="scene">
+        <div id="puzzle-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-1000 z-50"></div>
+        <div class="relative w-full max-w-3xl h-[60vh] border-8 border-[#e2cda6] bg-black overflow-hidden shadow-2xl rounded-sm">
+            <img src="現代地圖.png" alt="現代地圖" class="absolute inset-0 w-full h-full object-cover">
+            <img id="old-map-overlay" src="舊地圖.png" alt="舊地圖" class="absolute inset-0 w-full h-full object-cover origin-center opacity-70" style="transform: rotate(0deg) scale(1.1);">
+        </div>
+        <div class="mt-8 bg-[#d4b886] p-6 rounded-lg border-4 border-[#5a3c28] w-full max-w-3xl shadow-lg relative z-10">
+            <div class="flex justify-center gap-6 mb-4 text-[#3e2723] font-bold text-lg">
+                <span>將你的所在地與舊照片的地方疊合</span>
+            </div>
+            <div class="flex items-center mb-4">
+                <label class="w-32 font-bold text-[#3e2723]">老地圖旋轉</label>
+                <input type="range" id="map-rotation" min="-180" max="180" value="0" class="w-full slider">
+            </div>
+            <div class="flex items-center mb-6">
+                <label class="w-32 font-bold text-[#3e2723]">紙張透明度</label>
+                <input type="range" id="map-opacity" min="0" max="100" value="70" class="w-full slider">
+            </div>
+            <div class="flex justify-center">
+                <button onclick="checkMapAlignment()" class="ui-btn px-8 py-2 rounded-full font-bold text-xl">確認疊合</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 第一房間：寶美樓 ★ -->
+    <div id="scene-room1" class="scene">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-200 opacity-70 tracking-widest bg-black/50 px-4 py-2 rounded border border-stone-500 z-10 pointer-events-none">
+            【 第一房間 - 寶美樓 】
+        </div>
+        <div class="relative w-full h-full">
+            <div id="obj-photo1" class="interactable absolute top-[25%] left-[20%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" 
+                 onclick="inspectNode('連雅堂(照片)', 'obj-photo1')">
+                <div class="w-14 h-14 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(217,119,6,0.8)] text-white text-2xl">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="mt-2 text-sm font-bold text-amber-100 bg-black/70 px-3 py-1 rounded-full border border-amber-900/50">調查此處</div>
+            </div>
+            <div id="obj-poem" class="interactable absolute top-[45%] right-[25%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" 
+                 onclick="inspectNode('羅秀惠(照片)', 'obj-poem')">
+                <div class="w-14 h-14 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(217,119,6,0.8)] text-white text-2xl">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="mt-2 text-sm font-bold text-amber-100 bg-black/70 px-3 py-1 rounded-full border border-amber-900/50">調查牆面</div>
+            </div>
+            <div id="obj-photo2" class="interactable absolute bottom-[35%] left-[30%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" 
+                 onclick="inspectNode('謝介石(照片)', 'obj-photo2')">
+                <div class="w-14 h-14 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(217,119,6,0.8)] text-white text-2xl">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="mt-2 text-sm font-bold text-amber-100 bg-black/70 px-3 py-1 rounded-full border border-amber-900/50">尋找線索</div>
+            </div>
+            <div id="obj-keyboard" class="interactable absolute bottom-[15%] left-[50%] transform -translate-x-1/2 w-48 cursor-pointer hover:scale-110 transition duration-300" onclick="showPuzzle()">
+                <img src="鍵盤道具.png" alt="鍵盤機關" class="w-full drop-shadow-2xl">
+                <div class="mt-2 text-[#e2cda6] text-center font-bold text-shadow">桌上的鍵盤</div>
+            </div>
+        </div>
+
+        <div id="puzzle-input-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-8 rounded-xl shadow-2xl text-center w-96">
+            <h3 class="text-2xl mb-4 font-bold text-[#e2cda6]">機關鎖</h3>
+            <p class="mb-4 text-sm text-gray-300">「□□□上客豪遊，臥酒吞花興未休... 稻江便是小揚州。」<br>請輸入三個字以啟動機關：</p>
+            <input type="text" id="puzzle-input" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 mb-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-[#8b0000]" placeholder="請輸入...">
+            <p id="puzzle-error" class="text-red-500 mb-4 hidden">密碼錯誤，請再試一次。</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="checkPuzzle()" class="ui-btn px-6 py-2 rounded">確認</button>
+                <button onclick="hidePuzzle()" class="ui-btn px-6 py-2 rounded">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 連雅堂詩箋解謎場景 ★ -->
+    <div id="scene-poem-puzzle" class="scene" style="background-color: #0b0908;">
+        <header class="w-full max-w-5xl flex items-center justify-between my-4 px-4 z-20">
+            <div class="flex-1 bg-stone-900/90 border border-stone-800 rounded-lg px-6 py-4 text-lg md:text-xl font-bold text-amber-100 shadow tracking-wider text-center">
+                這是「她」寫給連雅堂的詩，嘗試找出他們的關係......
+            </div>
+        </header>
+        <main class="w-full max-w-5xl flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 relative z-10 my-auto pb-4">
+            <div class="flex flex-col items-center">
+                <div id="matrix-board" class="relative p-5 md:p-6 rounded-2xl paper-board border-4 border-[#734b2a] text-stone-900 select-none">
+                    <div id="poem-grid" class="flex flex-col gap-1 relative"></div>
+                </div>
+            </div>
+            <div class="flex flex-col items-center lg:items-start gap-3 w-full max-w-md">
+                <div class="w-full flex justify-between items-center px-1 text-xs">
+                    <span class="text-stone-400">已就位方塊：<strong id="piece-counter" class="text-amber-400 font-mono text-sm">0 / 10</strong></span>
+                    <div class="flex gap-2">
+                        <button onclick="resetPoemPuzzle()" class="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 rounded text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> 重置
+                        </button>
+                        <button onclick="goBack()" class="px-2.5 py-1 bg-red-900/80 hover:bg-red-700 text-stone-200 border border-red-700 rounded text-xs transition flex items-center gap-1 shadow-md">
+                            <i class="fa-solid fa-door-open"></i> 先離開
+                        </button>
+                    </div>
+                </div>
+                <div id="tray-area" class="w-full h-80 md:h-96 bg-stone-950/80 border-2 border-dashed border-stone-800/80 rounded-2xl relative overflow-hidden shadow-inner">
+                    <span id="tray-hint" class="absolute bottom-2 right-3 text-stone-600 text-[11px] pointer-events-none">
+                        <i class="fa-solid fa-hand-pointer mr-1"></i> 請將方塊拖曳至左側詩箋
+                    </span>
+                </div>
+            </div>
+        </main>
+        <footer class="w-full max-w-5xl py-2 px-4 bg-stone-950/90 border border-stone-800 rounded-xl shadow-2xl flex items-center justify-center z-20 mb-4">
+            <div id="status-hint" class="text-sm font-bold text-stone-300">覆蓋方塊以探得線索……</div>
+        </footer>
+        <div id="modal-clue" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+            <div class="bg-stone-900 border border-amber-600/80 w-full max-w-sm rounded-xl p-6 text-center shadow-2xl space-y-4">
+                <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                    <i class="fa-solid fa-pen-nib mr-1"></i> 線索記錄
+                </div>
+                <div class="p-3 bg-black/50 border border-stone-800 rounded-lg">
+                    <span class="text-xs text-stone-400 block mb-1">已成功辨識詩中關鍵字：</span>
+                    <span class="text-2xl font-black text-amber-400 calligraphy tracking-wider">連雅堂: 故友</span>
+                </div>
+                <p class="text-xs text-stone-300 leading-relaxed text-left bg-stone-950/60 p-2.5 rounded border border-stone-800/80">
+                    印版密合，獨現「故友」二字。此項線索已正式記下並收錄於<strong>「筆記本」</strong>中！
+                </p>
+                <button onclick="stepToCardReward()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-stone-950 text-xs font-bold rounded-lg tracking-wider transition">
+                    檢視暗格掉落物
+                </button>
+            </div>
+        </div>
+        <div id="modal-card" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+            <div class="bg-gradient-to-b from-stone-900 to-black border-2 border-amber-500 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl space-y-4">
+                <div class="text-xs uppercase tracking-[0.25em] text-amber-500 font-bold">
+                    <i class="fa-solid fa-gift mr-1"></i> 獲得字卡！
+                </div>
+                <div class="w-28 h-28 mx-auto rounded-xl border-2 border-amber-500 bg-stone-950 flex flex-col items-center justify-center p-3 shadow-inner">
+                    <span class="text-3xl font-black text-amber-400 font-mono tracking-widest">RU;_</span>
+                    <span class="text-[10px] text-stone-400 mt-2 font-serif">連雅堂之箋</span>
+                </div>
+                <h3 class="text-base font-bold text-amber-100">獲得字卡：【RU;_】</h3>
+                <p class="text-xs text-stone-400 leading-relaxed">
+                    木板底層暗格彈開，滑落出一張帶有古怪字根的密碼字卡。
+                </p>
+                <button onclick="storeToInventory()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-stone-950 text-xs font-bold rounded-lg tracking-wider transition">
+                    放入道具箱並返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 羅秀惠賓果解謎場景 ★ -->
+    <div id="scene-luo-puzzle" class="scene" style="background-color: #0b0908;">
+        <button onclick="showHint('luo')" class="absolute top-24 left-8 z-30 bg-red-800/80 hover:bg-red-700 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-lg border-2 border-amber-600/50 transition">
+            <i class="fa-solid fa-info"></i>
+        </button>
+        <div id="luo-input-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[80] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-8 rounded-xl shadow-2xl text-center w-80 md:w-96">
+            <h3 class="text-2xl mb-4 font-bold text-[#e2cda6]">輸入密碼</h3>
+            <p class="mb-4 text-lg text-gray-300">他們的關係是？</p>
+            <input type="text" id="luo-puzzle-input" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 mb-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-[#8b0000]" placeholder="請輸入...">
+            <p id="luo-puzzle-error" class="text-red-500 mb-4 hidden">密碼錯誤，請再試一次。</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="checkLuoInput()" class="ui-btn px-6 py-2 rounded">確認</button>
+                <button onclick="hideLuoInput()" class="ui-btn px-6 py-2 rounded">取消</button>
+            </div>
+        </div>
+        <header class="w-full max-w-5xl flex items-center justify-between my-4 px-4 z-20">
+            <div class="flex-1 bg-stone-900/90 border border-stone-800 rounded-lg px-6 py-4 text-lg md:text-xl font-bold text-amber-100 shadow tracking-wider text-center">
+                這是「她」描寫心境的一首詩，嘗試找出他們的關係......
+            </div>
+        </header>
+        <main class="w-full max-w-5xl flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 relative z-10 my-auto pb-4">
+            <div class="flex flex-col items-center">
+                <div class="relative p-5 md:p-6 rounded-2xl paper-board border-4 border-[#734b2a] text-stone-900 select-none shadow-xl">
+                    <div id="luo-poem-grid" class="flex flex-col gap-1 relative"></div>
+                </div>
+            </div>
+            <div class="flex flex-col gap-4 w-full max-w-md items-center">
+                <div class="w-full flex justify-end px-1 text-xs">
+                    <div class="flex gap-2">
+                        <button onclick="checkLuoWin()" class="px-2.5 py-1 bg-green-800 hover:bg-green-700 text-stone-200 border border-green-700 rounded text-xs transition flex items-center gap-1 shadow-md">
+                            <i class="fa-solid fa-check"></i> 確認
+                        </button>
+                        <button onclick="resetLuoPuzzle()" class="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 rounded text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> 重置
+                        </button>
+                        <button onclick="goBack()" class="px-2.5 py-1 bg-red-900/80 hover:bg-red-700 text-stone-200 border border-red-700 rounded text-xs transition flex items-center gap-1 shadow-md">
+                            <i class="fa-solid fa-door-open"></i> 先離開
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-[#e8dcb8] p-4 border-4 border-[#5a3c28] rounded-xl shadow-inner">
+                    <div id="luo-bingo-grid" class="flex flex-col border-t border-l border-[#5a3c28]"></div>
+                </div>
+                <div class="w-full bg-stone-900 border border-stone-700 p-4 rounded-xl text-lg md:text-xl text-amber-100 font-mono tracking-widest leading-relaxed shadow-lg text-center">
+                    <div>34, 33, 37, 28, 44, ＿</div>
+                    <div>32, 21, 14,  9,  6, ＿</div>
+                    <div> 0,  1,  2,  6, ＿, 44</div>
+                </div>
+            </div>
+        </main>
+        <footer class="w-full max-w-5xl py-2 px-4 bg-stone-950/90 border border-stone-800 rounded-xl shadow-2xl flex items-center justify-center z-20 mb-4">
+            <div id="luo-status-hint" class="text-sm font-bold text-stone-300">點擊格子找出正確的數字密碼……</div>
+        </footer>
+        <div id="modal-luo-clue" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+            <div class="bg-[#e6d3af] bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] border border-[#b59b74] w-full max-w-md rounded-sm p-8 text-center shadow-2xl space-y-4 text-[#3e2723]">
+                <h3 class="text-xl font-bold border-b border-[#a37c4d] pb-2 mb-4 text-[#5a3c28]">發現紙條</h3>
+                <p class="text-left text-lg md:text-xl leading-relaxed font-serif font-bold">
+                    台南有句諺語：「蔡姑娘仔嫁尪——加羅（勞）的」<br><br>
+                    時人撰聯挖苦說：「一父二夫三舉人，四妻五妾六娼妓。」<br><br>
+                    撰寫這段三角關係。
+                </p>
+                <button onclick="storeLuoToInventory()" class="mt-6 w-full py-3 bg-[#5a3c28] hover:bg-[#3e2723] text-[#e2cda6] text-base font-bold rounded-lg tracking-wider transition shadow-lg border border-[#3e2723]">
+                    收下紙條並返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+   <!-- ★ 謝介石護照解謎場景 ★ -->
+    <div id="scene-xie-puzzle" class="scene" style="background-color: #1c1511;">
+        <button onclick="showHint('xie')" class="absolute top-28 left-8 z-30 bg-red-800/80 hover:bg-red-700 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-lg border-2 border-amber-600/50 transition">
+            <i class="fa-solid fa-info"></i>
+        </button>
+        <header class="w-full max-w-5xl flex items-center justify-between mt-24 mb-4 px-4 z-20">
+            <div class="flex-1 bg-stone-900/90 border border-stone-800 rounded-lg px-6 py-4 text-lg md:text-xl font-bold text-amber-100 shadow tracking-wider text-center">
+                將謝介石一生經歷的5個國籍護照，依時間順序放入方格中。
+            </div>
+            <div class="flex gap-2 ml-4">
+                <button onclick="checkXieWin()" class="px-3 py-1.5 bg-green-800 hover:bg-green-700 text-stone-200 border border-green-700 rounded text-xs transition flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-check"></i> 確認排列
+                </button>
+                <button onclick="resetXiePuzzle()" class="px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 rounded text-xs transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> 重置
+                </button>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-red-900/80 hover:bg-red-700 text-stone-200 border border-red-700 rounded text-xs transition flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-door-open"></i> 先離開
+                </button>
+            </div>
+        
+        </header>
+        <main class="w-full max-w-4xl flex-1 flex flex-col items-center justify-center gap-8 relative z-10 my-auto pb-4">
+            <div id="xie-slots-container" class="flex gap-4 p-6 bg-stone-900/80 rounded-xl border-4 border-[#5a3c28] shadow-xl w-full justify-around">
+                <div class="passport-slot relative" id="xie-slot-0"><span class="opacity-30">1</span></div>
+                <div class="passport-slot relative" id="xie-slot-1"><span class="opacity-30">2</span></div>
+                <div class="passport-slot relative" id="xie-slot-2"><span class="opacity-30">3</span></div>
+                <div class="passport-slot relative" id="xie-slot-3"><span class="opacity-30">4</span></div>
+                <div class="passport-slot relative" id="xie-slot-4"><span class="opacity-30">5</span></div>
+            </div>
+            <div id="xie-tray" class="relative w-full h-48 border-2 border-dashed border-stone-700 bg-stone-950 rounded-xl flex items-center shadow-inner overflow-hidden">
+                <span id="xie-tray-hint" class="absolute bottom-2 right-3 text-stone-600 text-[11px] pointer-events-none">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> 請將護照拖曳至上方方格
+                </span>
+            </div>
+        </main>
+        <div id="modal-xie-clue" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+            <div class="bg-stone-900 border border-amber-600/80 w-full max-w-sm rounded-xl p-6 text-center shadow-2xl space-y-4">
+                <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                    <i class="fa-solid fa-pen-nib mr-1"></i> 線索記錄
+                </div>
+                <div class="p-3 bg-black/50 border border-stone-800 rounded-lg">
+                    <span class="text-xs text-stone-400 block mb-1">已確認關係並發現新史料：</span>
+                    <span class="text-2xl font-black text-amber-400 calligraphy tracking-wider">謝介石: 丈夫</span>
+                </div>
+                <p class="text-xs text-stone-300 leading-relaxed text-left bg-stone-950/60 p-2.5 rounded border border-stone-800/80">
+                    排序正確，密碼相符。你找到了一份關於世紀婚禮的<strong>「史料記載」</strong>，已收錄於筆記本中！
+                </p>
+                <button onclick="stepToXieCardReward()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-stone-950 text-xs font-bold rounded-lg tracking-wider transition">
+                    檢視機關掉落物
+                </button>
+            </div>
+        </div>
+        <div id="modal-xie-card" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+            <div class="bg-gradient-to-b from-stone-900 to-black border-2 border-amber-500 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl space-y-4">
+                <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">
+                    <i class="fa-solid fa-gift mr-1"></i> 獲得字卡！
+                </div>
+                <div class="w-28 h-28 mx-auto rounded-xl border-2 border-amber-500 bg-stone-950 flex flex-col items-center justify-center p-3 shadow-inner">
+                    <span class="text-3xl font-black text-amber-400 font-mono tracking-widest">X.6</span>
+                    <span class="text-[10px] text-stone-400 mt-2 font-serif">謝介石之箋</span>
+                </div>
+                <h3 class="text-base font-bold text-amber-100">獲得字卡：【X.6】</h3>
+                <p class="text-xs text-stone-400 leading-relaxed">
+                    機關彈開，滑落出一張帶有古怪字根的密碼字卡。
+                </p>
+                <button onclick="storeXieToInventory()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-stone-950 text-xs font-bold rounded-lg tracking-wider transition">
+                    放入道具箱並返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 護照大圖特寫的 Modal -->
+    <div id="passport-detail-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
+        <div class="relative flex flex-col items-center">
+            <button onclick="closePassportDetail()" class="absolute -top-4 -right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-[#e2cda6] hover:bg-red-600 shadow-lg text-xl z-[120]">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="passport-detail-img" src="" alt="護照特寫" class="max-w-[90vw] max-h-[85vh] border-4 border-[#5a3c28] shadow-2xl rounded-sm">
+        </div>
+    </div>
+
+    <!-- ★ 第二房間：江山樓 ★ -->
+    <div id="scene-room2" class="scene" style="background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url('江山樓場景.jpeg'); background-size: cover; background-position: center;">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-800 opacity-60 tracking-widest bg-white/50 px-4 py-2 rounded">
+            【 第二房間 - 江山樓大廳 】
+        </div>
+
+        <div id="obj-jiangshan-doc" class="interactable absolute top-[40%] left-[30%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform hidden" onclick="inspectNode('江山樓簡介', 'obj-jiangshan-doc')">
+            <div class="w-12 h-12 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(217,119,6,0.8)] text-white text-xl">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <div class="mt-2 text-xs font-bold text-amber-100 bg-black/70 px-2 py-1 rounded-full border border-amber-900/50">尋找線索</div>
+        </div>
+
+        <div id="obj-jiangshan-photo" class="interactable absolute top-[60%] right-[30%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform hidden" onclick="inspectNode('江山樓舊照', 'obj-jiangshan-photo')">
+            <div class="w-12 h-12 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(217,119,6,0.8)] text-white text-xl">
+                <i class="fa-solid fa-camera-retro"></i>
+            </div>
+            <div class="mt-2 text-xs font-bold text-amber-100 bg-black/70 px-2 py-1 rounded-full border border-amber-900/50">調查照片</div>
+        </div>
+
+        <div id="jiangshan-roof-photo" class="interactable absolute top-[45%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-105 transition-transform hidden" onclick="promptFloorSelect('scene-roof', '頂樓')">
+            <img src="屋上庭園.png" alt="屋頂庭園舊照" class="w-56 h-auto object-cover border-4 border-[#5a3c28] shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+            <div class="mt-4 text-center">
+                <span class="bg-black/70 text-[#e2cda6] px-4 py-2 rounded-full border border-[#a37c4d] font-bold tracking-widest text-sm shadow-lg">前往頂樓...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ★ 頂樓：屋上庭園 ★ -->
+    <div id="scene-roof" class="scene" style="background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url('屋上庭園場景.png'); background-size: cover; background-position: center;">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-800 opacity-60 tracking-widest bg-white/50 px-4 py-2 rounded">
+            【 頂樓 - 屋上庭園 】
+        </div>
+        
+        <div id="obj-roof-doc" class="interactable absolute top-[30%] right-[20%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" onclick="inspectNode('江山樓史料1', 'obj-roof-doc')">
+            <div class="w-12 h-12 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(217,119,6,0.8)] text-white text-xl">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <div class="mt-2 text-xs font-bold text-amber-100 bg-black/70 px-2 py-1 rounded-full border border-amber-900/50">調查史料</div>
+        </div>
+
+        <div id="jiangshan-banquet-photo" class="interactable absolute top-[45%] left-[20%] cursor-pointer hover:scale-105 transition-transform" onclick="promptFloorSelect('scene-banquet', '3')">
+            <img src="宴會廳.png" alt="宴會廳" class="w-48 h-32 object-cover border-4 border-[#5a3c28] shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+            <div class="mt-3 text-center">
+                <span class="bg-white/80 text-[#3e2723] px-3 py-1 rounded-full border border-[#5a3c28] font-bold text-xs shadow-md">前往此處...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 三樓：宴會廳 ★ -->
+    <div id="scene-banquet" class="scene" style="background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('宴會廳場景.png'); background-size: cover; background-position: center;">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-200 opacity-70 tracking-widest bg-black/50 px-4 py-2 rounded border border-stone-500">
+            【 三樓 - 宴會廳 】
+        </div>
+        
+        <div id="obj-banquet-doc" class="interactable absolute top-[40%] left-[25%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" onclick="inspectNode('江山樓史料2', 'obj-banquet-doc')">
+            <div class="w-12 h-12 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(217,119,6,0.8)] text-white text-xl">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <div class="mt-2 text-xs font-bold text-amber-100 bg-black/70 px-2 py-1 rounded-full border border-amber-900/50">調查桌面</div>
+        </div>
+
+        <div id="jiangshan-bath-photo" class="interactable absolute top-[55%] right-[15%] cursor-pointer hover:scale-105 transition-transform" onclick="promptFloorSelect('scene-bath', '4')">
+            <img src="浴廁.png" alt="浴廁" class="w-48 h-32 object-cover border-4 border-stone-400 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+            <div class="mt-3 text-center">
+                <span class="bg-white/80 text-stone-200 px-3 py-1 rounded-full border border-stone-400 font-bold text-xs shadow-md">尋找下一個地點...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 四樓：浴廁 ★ -->
+    <div id="scene-bath" class="scene" style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.3)), url('浴廁場景.png'); background-size: cover; background-position: center;">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-800 opacity-60 tracking-widest bg-white/60 px-4 py-2 rounded">
+            【 四樓 - 浴廁 】
+        </div>
+        <div class="relative w-full h-full">
+            <div class="interactable absolute top-[60%] left-[30%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" onclick="showBathPuzzle()">
+                <div class="w-12 h-12 bg-red-800/80 border-2 border-red-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.8)] text-white text-xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <div class="mt-2 text-xs font-bold text-red-100 bg-black/70 px-2 py-1 rounded-full border border-red-900/50">機關鎖</div>
+            </div>
+
+            <div id="obj-bath-equip-doc" class="interactable absolute bottom-[25%] left-[20%] flex flex-col items-center cursor-pointer hover:scale-110 transition-transform" onclick="inspectNode('江山樓史料3', 'obj-bath-equip-doc')">
+                <div class="w-12 h-12 bg-amber-600/80 border-2 border-amber-200 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(217,119,6,0.8)] text-white text-xl">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="mt-2 text-xs font-bold text-amber-100 bg-black/70 px-2 py-1 rounded-full border border-amber-900/50">調查角落</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 樓層選擇 / 浴廁密碼鎖 共用輸入框 -->
+    <div id="general-input-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-8 rounded-xl shadow-2xl text-center w-80 md:w-96">
+        <h3 id="general-input-title" class="text-2xl mb-4 font-bold text-[#e2cda6]"></h3>
+        <p id="general-input-desc" class="mb-4 text-sm text-gray-300"></p>
+        <input type="text" id="general-input" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 mb-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-[#8b0000]" placeholder="請輸入...">
+        <p id="general-input-error" class="text-red-500 mb-4 hidden">錯誤，請再試一次。</p>
+        <div class="flex justify-center gap-4">
+            <button id="btn-general-submit" class="ui-btn px-6 py-2 rounded">確認</button>
+            <button onclick="hideGeneralInput()" class="ui-btn px-6 py-2 rounded">取消</button>
+        </div>
+    </div>
+    
+    <!-- 藝旦間密碼解鎖彈窗 -->
+    <div id="yidan-input-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-8 rounded-xl shadow-2xl text-center w-80 md:w-96">
+        <h3 class="text-2xl mb-4 font-bold text-[#e2cda6]">通往下一關</h3>
+        <p class="mb-4 text-sm text-gray-300 leading-relaxed">當時有俗諺「登江山樓，吃臺灣菜，聽□□唱曲」，道盡江山樓盛況。</p>
+        <input type="text" id="yidan-input" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 mb-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-[#8b0000]" placeholder="請輸入...">
+        <p id="yidan-input-error" class="text-red-500 mb-4 hidden">關鍵字錯誤，請再試一次。</p>
+        <div class="flex justify-center gap-4">
+            <button onclick="checkYidanInput()" class="ui-btn px-6 py-2 rounded">確認</button>
+            <button onclick="document.getElementById('yidan-input-container').classList.add('hidden')" class="ui-btn px-6 py-2 rounded">取消</button>
+        </div>
+    </div>
+
+    <!-- ★ 角色立繪層 ★ -->
+    <div id="character-container" class="absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none" style="z-index: 15;">
+    </div>
+
+    <!-- 對話框 -->
+    <div id="dialog-box">
+        <div class="dialog-text">
+            <span id="dialog-content"></span><span class="typewriter-cursor"></span>
+        </div>
+        <div class="flex justify-end mt-2">
+            <button id="dialog-next-btn" onclick="advanceDialog()" class="text-[#e2cda6] hover:text-white flex items-center animate-pulse">
+                點擊繼續 <i class="fas fa-caret-down ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 模態框遮罩 -->
+    <div id="modal-overlay" class="modal-overlay" onclick="closeAllModals()"></div>
+
+    <!-- 筆記本模態框 -->
+    <div id="notebook-modal" class="modal">
+        <div class="flex justify-between items-center mb-6 border-b-2 border-[#5a3c28] pb-2">
+            <h2 class="text-3xl font-bold"><i class="fas fa-book mr-2"></i>筆記本 (線索)</h2>
+            <button onclick="closeAllModals()" class="text-2xl hover:text-red-800"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="notebook-content" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <p class="text-gray-600 italic col-span-2">尚未收集到任何線索...</p>
+        </div>
+    </div>
+
+    <!-- 道具欄模態框 -->
+    <div id="inventory-modal" class="modal">
+        <div class="flex justify-between items-center mb-6 border-b-2 border-[#5a3c28] pb-2">
+            <h2 class="text-3xl font-bold"><i class="fas fa-briefcase mr-2"></i>道具欄</h2>
+            <button onclick="closeAllModals()" class="text-2xl hover:text-red-800"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="inventory-content" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <p class="text-gray-600 italic col-span-4">道具欄是空的...</p>
+        </div>
+    </div>
+
+    <!-- 照片特寫模態框 -->
+    <div id="photo-modal" class="modal photo-modal-style z-[60]">
+        <button onclick="closePhotoModal()" class="absolute -top-4 -right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-[#e2cda6] hover:bg-red-600 shadow-lg text-xl" style="z-index:70;">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="relative flex flex-col items-center max-w-full">
+            <img id="inspected-photo" src="" alt="特寫照片" class="max-w-full max-h-[70vh] border-8 border-white shadow-2xl rounded-sm">
+            <div id="inspected-text" class="hidden historical-doc"></div>
+
+            <button id="btn-enter-puzzle" onclick="triggerPhotoPuzzle()" class="hidden mt-4 ui-btn px-6 py-2 rounded-full font-bold text-lg shadow-lg transition-transform hover:scale-105">
+                <i class="fa-solid fa-magnifying-glass mr-2"></i>仔細查看...
+            </button>
+            <button id="btn-enter-yidan" onclick="triggerYidanUnlock()" class="hidden mt-4 ui-btn px-6 py-2 rounded-full font-bold text-lg shadow-lg transition-transform hover:scale-105">
+                <i class="fa-solid fa-key mr-2"></i>前往下一關...
+            </button>
+        </div>
+    </div>
+    
+    <!-- 動態文字提示字卡彈窗 -->
+    <div id="hint-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[90] flex items-center justify-center p-4 hidden">
+        <div class="relative bg-[#e6d3af] bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] border border-[#b59b74] p-8 rounded shadow-2xl max-w-lg w-full text-[#3e2723]">
+            <button onclick="closeHint()" class="absolute -top-4 -right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-[#e2cda6] hover:bg-red-600 shadow-lg text-xl z-[100]">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="flex items-center justify-center gap-2 mb-4 border-b-2 border-[#a37c4d] pb-2">
+                <i class="fa-solid fa-circle-info text-2xl text-[#8b0000]"></i>
+                <h3 class="text-2xl font-bold text-[#5a3c28]">提示</h3>
+            </div>
+            <div id="hint-content" class="text-lg leading-relaxed font-serif font-bold text-justify"></div>
+        </div>
+    </div>
+
+    <!-- 提示訊息 -->
+    <div id="notification" class="absolute top-24 left-1/2 transform -translate-x-1/2 bg-[#8b0000] text-white px-6 py-3 rounded shadow-lg z-[100] font-bold transition-opacity duration-500 opacity-0 pointer-events-none">
+        獲得物品！
+    </div>
+
+    <!-- ★ 第三房間：藝旦間場景 ★ -->
+    <div id="scene-yidan" class="scene" style="background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('藝旦間場景.jpeg'); background-size: cover; background-position: center;">
+        <div class="absolute top-10 left-10 text-3xl font-bold text-stone-200 opacity-70 tracking-widest bg-black/50 px-4 py-2 rounded border border-stone-500 pointer-events-none">
+            【 第三房間 - 藝旦間 】
+        </div>
+
+        <!-- ★ 藝旦間暗室遮罩與電燈開關 ★ -->
+        <div id="yidan-dark-overlay" class="absolute inset-0 z-50 flex items-center justify-center transition-opacity duration-1000 hidden">
+            <div class="absolute top-1/4 text-center pointer-events-none">
+                <p class="text-stone-400 text-lg md:text-xl tracking-widest animate-pulse">房間裡一片漆黑……先摸索牆上的開關吧</p>
+            </div>
+            <button id="yidan-light-switch" onclick="turnOnYidanLight()" class="absolute right-[18%] top-[46%] flex flex-col items-center group cursor-pointer focus:outline-none">
+                <div class="w-12 h-16 bg-stone-800 border-2 border-stone-600 rounded shadow-[0_0_25px_rgba(251,191,36,0.35)] group-hover:shadow-[0_0_35px_rgba(251,191,36,0.9)] flex flex-col items-center justify-center transition-all group-hover:scale-110">
+                    <div class="w-5 h-8 bg-stone-700 border border-stone-500 rounded-sm flex items-start justify-center p-1">
+                        <div class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
+                    </div>
+                </div>
+                <span class="mt-2 text-xs text-amber-200/80 bg-black/80 px-2.5 py-1 rounded-full border border-amber-700/50 tracking-widest">開啟電燈</span>
+            </button>
+        </div>
+        
+        <div id="obj-scroll-1" class="interactable absolute flex-col items-center cursor-pointer hover:scale-110 transition-transform duration-300 z-10 hidden" onclick="startAssessment1()"></div>
+        <div id="obj-scroll-2" class="interactable absolute flex-col items-center cursor-pointer hover:scale-110 transition-transform duration-300 z-10 hidden" onclick="startAssessment2()"></div>
+        <div id="obj-scroll-3" class="interactable absolute flex-col items-center cursor-pointer hover:scale-110 transition-transform duration-300 z-10 hidden" onclick="startAssessment3()"></div>
+    
+        <!-- 考核一密碼解鎖彈窗 -->
+        <div id="assessment1-input-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-8 rounded-xl shadow-2xl text-center w-80 md:w-96">
+            <h3 class="text-2xl mb-4 font-bold text-[#e2cda6]">考核一</h3>
+            <p class="mb-4 text-sm text-gray-300 leading-relaxed"></p>
+            <input type="text" id="assessment1-input" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 mb-4 text-center text-xl focus:outline-none focus:ring-2 focus:ring-[#8b0000]" placeholder="請輸入...">
+            <p id="assessment1-input-error" class="text-red-500 mb-4 hidden">起語錯誤，請打開道具欄仔細查閱史料。</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="checkAssessment1Input()" class="ui-btn px-6 py-2 rounded">確認</button>
+                <button onclick="hideAssessment1Input()" class="ui-btn px-6 py-2 rounded">稍後再解</button>
+            </div>
+        </div>
+
+        <!-- 考核二配對解謎彈窗 (點唱機) -->
+        <div id="assessment2-puzzle-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-6 rounded-xl shadow-2xl text-center w-11/12 md:w-[500px]">
+            <button onclick="hideAssessment2Puzzle()" class="absolute -top-4 -right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-[#e2cda6] hover:bg-red-600 shadow-lg text-xl z-[80] transition-transform hover:scale-110">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-2xl mb-2 font-bold text-[#e2cda6] border-b border-[#a37c4d] pb-2">考核二 - 聽音辨曲</h3>
+            <p class="mb-4 text-sm text-gray-300">請聆聽點唱機音軌，並為 A、B、C 配對正確的曲名。<br><span class="text-red-400">注意：若配對錯誤將扣除 10 分鐘！</span></p>
+            
+            <div id="a2-tracks" class="flex flex-col gap-2 mb-4 text-left"></div>
+            
+            <p id="assessment2-error" class="text-red-500 mb-4 hidden font-bold">配對錯誤，已扣除 10 分鐘！請再試一次。</p>
+            
+            <div class="flex justify-center gap-4 mt-2">
+                <button onclick="checkA2Match()" class="ui-btn px-8 py-2 rounded-full font-bold text-lg text-amber-200 border border-amber-600 shadow-[0_0_10px_rgba(217,119,6,0.5)]">
+                    進行點唱
+                </button>
+            </div>
+        </div>
+
+        <!-- 小調曲拳 划拳對戰介面 -->
+        <div id="fist-game-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[70] hidden bg-stone-900/95 border-2 border-[#a37c4d] p-6 rounded-xl shadow-2xl text-center w-11/12 md:w-[500px]">
+            <button onclick="exitFistGame()" class="absolute -top-4 -right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-[#e2cda6] hover:bg-red-600 shadow-lg text-xl z-[80] transition-transform hover:scale-110">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <h3 class="text-2xl mb-2 font-bold text-[#e2cda6]">考核一 - 划拳對決</h3>
+            <div id="fist-game-log" class="h-32 mb-4 bg-black/60 border border-[#5a3c28] rounded p-3 text-stone-300 text-sm overflow-y-auto flex flex-col justify-end text-left space-y-1"></div>
+            <h4 id="fist-turn-indicator" class="text-xl font-bold text-amber-400 mb-3">【你的回合】</h4>
+            
+            <div id="computer-action-display" class="mb-4 text-amber-200 hidden bg-red-900/30 border border-red-800/50 rounded py-2">
+                對手已出拳，並預測雙方總數為：<span id="computer-guess-number" class="text-3xl font-black text-red-500 ml-2">?</span>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-sm text-stone-300 mb-2">請選擇你要出的手指數 (0-5)：</p>
+                <div class="flex flex-wrap justify-center gap-2" id="player-fingers-btns"></div>
+            </div>
+
+            <div id="player-guess-section" class="mb-4 bg-stone-800/50 p-3 rounded border border-stone-700">
+                <p class="text-sm text-stone-300 mb-2">請預測雙方手指總數 (0-10)：</p>
+                <input type="number" id="player-guess-input" min="0" max="10" class="w-full bg-[#3e2723] text-[#e2cda6] border border-[#a37c4d] rounded px-4 py-2 text-center text-xl focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="請輸入 0-10 的數字">
+            </div>
+
+            <div class="flex justify-center gap-4 mt-4">
+                <button onclick="submitFistAction()" id="btn-submit-fist" class="ui-btn px-8 py-2 rounded-full font-bold text-lg">確定出拳</button>
+                <button onclick="exitFistGame()" class="ui-btn px-8 py-2 rounded-full font-bold text-lg" style="background: linear-gradient(to bottom, #7f1d1d, #450a0a); border-color: #b91c1c;">暫時離開</button>
+            </div>
+        </div>
+    </div> <!-- scene-yidan 結束 -->
+
+    <!-- ★ 獲得鑑札彈窗 ★ -->
+    <div id="modal-jianzha" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[350] flex items-center justify-center p-4 hidden">
+        <div class="bg-[#e6d3af] bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] border-4 border-[#5a3c28] w-full max-w-md rounded-lg p-8 text-center shadow-2xl text-[#3e2723] relative">
+            <div class="border-2 border-[#8b0000] p-4 rounded">
+                <div class="text-xs tracking-[0.3em] text-[#8b0000] font-bold mb-1">官設檢番核發</div>
+                <h3 class="text-4xl font-black tracking-widest text-[#3e2723] mb-3 calligraphy">藝 旦 鑑 札</h3>
+                <div class="w-24 h-24 mx-auto my-3 rounded-full border-4 border-[#8b0000] flex items-center justify-center bg-[#d4b886]/60 shadow-inner">
+                    <span class="text-3xl font-black text-[#8b0000] calligraphy">合格</span>
+                </div>
+                <p class="text-sm leading-relaxed font-serif font-bold text-justify mt-3">
+                    恭喜你通過划拳、聽音辨曲與琵琶彈奏三項考核！<br>
+                    你已正式取得執業執照<strong>「鑑札」</strong>，並已收錄於道具欄中。現在，你終於能拼湊出「她」的完整身世……
+                </p>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="enterMemoryPuzzleFromJianzha()" class="flex-1 py-2.5 bg-[#8b0000] hover:bg-red-800 text-[#e2cda6] font-bold rounded-lg tracking-wider transition shadow-lg">
+    前往十六宮格挑戰
+</button>
+            </div>
+        </div>
+    </div>
+<!-- ★ 線索 C4：藝旦故事十六宮格記憶力挑戰 ★ -->
+    <div id="scene-memory-puzzle" class="scene" style="background: radial-gradient(circle at center, #2b1b12 0%, #0d0805 100%);">
+        <div class="w-full max-w-6xl h-full pt-20 pb-4 px-4 flex flex-col gap-3">
+            <!-- 上方引言文字框 -->
+            <!-- 上方引言文字框 -->
+            <div class="bg-stone-900/90 border border-stone-800 rounded-lg px-6 py-3.5 text-xs md:text-sm leading-relaxed font-bold text-amber-100 shadow tracking-wider shrink-0 text-justify">
+                在那個年代，女孩走上藝旦路途，多半身不由己。有的被人誘拐，再無回頭路；有的家貧如洗，用賣身契換一家口糧；也有人迫於無奈自願賣身。而原因不乏：本是富裕人家掌上明珠，卻因家道中落只得捨下身段，踏進原本不屬於她們的世界；或是父母本就倚此行業為生，自小浸在絲竹與脂粉香裡，故繼其衣缽；又或是也有的原是台上的女伶，轉身下了戲台，成了席間賣藝的人。緣由千差萬別，無奈卻是相同的：踏入煙花，再難自由。
+           </div>
+
+            <!-- 狀態列與控制按鈕 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-stone-900/90 border border-[#5a3c28] rounded-lg px-4 py-2 shrink-0">
+                <div class="flex items-center gap-4">
+                    <span id="memory-status-text" class="text-amber-300 font-bold text-sm md:text-base tracking-wider">
+                        👀 記憶時間剩餘：<span id="memory-countdown" class="text-xl text-amber-400 font-mono">20</span> 秒
+                    </span>
+                    <span class="text-stone-300 text-sm">
+                        已配對：<strong id="memory-match-count" class="text-emerald-400 font-mono">0 / 8</strong>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-memory-cover" onclick="forceCoverMemoryCards()" class="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm rounded-lg border border-emerald-400 shadow transition">
+                        <i class="fas fa-eye-slash mr-1"></i>蓋牌（開始作答）
+                    </button>
+                    <button onclick="inspectItem('藝旦小故事史料', null)" class="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 text-white font-bold text-sm rounded-lg border border-amber-400 shadow transition">
+                        <i class="fas fa-scroll mr-1"></i>查看藝旦史料
+                    </button>
+                    <button onclick="initMemoryGame()" class="px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 text-sm rounded-lg border border-stone-600 transition">
+                        <i class="fas fa-rotate-left mr-1"></i>重新洗牌
+                    </button>
+                  
+                </div>
+            </div>
+
+            <!-- 4x4 十六宮格卡片區 -->
+            <div id="memory-grid" class="flex-1 grid grid-cols-4 gap-2.5 md:gap-3 min-h-0"></div>
+
+            <!-- ★ 配對成功後浮現的前往最終章按鈕 ★ -->
+            <button id="btn-memory-to-final" onclick="enterFinalChapter()" class="hidden fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ui-btn px-8 py-3 rounded-full text-xl font-bold tracking-widest border-2 border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.8)] animate-bounce">
+                <i class="fas fa-scroll mr-2"></i>帶著名詞解釋冊，前往最終章
+            </button>
+        </div>
+  
+    </div>
+    <!-- ★ 最終章：王香禪生平考卷場景 (六頁分頁版) ★ -->
+    <div id="scene-final" class="scene" style="background: radial-gradient(circle at center, #2b1b12 0%, #0d0805 100%);">
+        <div class="w-full max-w-4xl h-full pt-24 pb-6 px-4 md:px-8 flex flex-col">
+            <div class="exam-paper flex-1 flex flex-col overflow-hidden rounded shadow-2xl relative">
+                <!-- 考卷固定表頭與六頁頁籤 -->
+                <div class="px-6 pt-5 pb-3 border-b-4 border-double border-[#5a3c28] bg-[#e3d4b7]/80 shrink-0">
+                    <div class="text-center mb-3">
+                        <div class="text-xs tracking-[0.35em] text-[#8b0000] font-bold">煙花筆墨與時代殘影・一代詩妓王香禪</div>
+                        <h2 class="text-2xl md:text-3xl font-black tracking-widest text-[#3e2723]">歷史檔案考卷（共六頁）</h2>
+                    </div>
+                    <div id="exam-page-tabs" class="flex flex-wrap justify-center gap-2"></div>
+                </div>
+
+                <!-- 考卷內文捲動區 -->
+                <div id="final-exam-body" class="flex-1 overflow-y-auto px-6 md:px-10 py-6 text-base md:text-lg leading-[2.4] text-[#2b1b12] font-serif text-justify"></div>
+
+                <!-- 考卷固定底部：翻頁與交卷 -->
+                <div class="px-6 py-4 border-t-2 border-[#a37c4d] bg-[#e3d4b7]/90 flex flex-col gap-3 shrink-0">
+                    <div id="exam-feedback" class="text-center text-sm md:text-base font-bold text-[#8b0000] hidden"></div>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex gap-2">
+                            <button id="btn-exam-prev" onclick="prevExamPage()" class="px-4 py-2 rounded font-bold bg-[#5a3c28] hover:bg-[#3e2723] text-[#e2cda6] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                <i class="fas fa-chevron-left mr-1"></i>上一頁
+                            </button>
+                            <button id="btn-exam-next" onclick="nextExamPage()" class="px-4 py-2 rounded font-bold bg-[#5a3c28] hover:bg-[#3e2723] text-[#e2cda6] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                下一頁<i class="fas fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="resetFinalExam()" class="px-4 py-2 rounded-full text-sm font-bold bg-stone-700 hover:bg-stone-600 text-stone-200 transition">
+                                清空重填
+                            </button>
+                            <button onclick="checkFinalExam()" class="ui-btn px-7 py-2 rounded-full text-base md:text-lg font-bold tracking-widest border-2 border-amber-600/60 hover:text-white">
+                                <i class="fas fa-pen-nib mr-2"></i>提交考卷
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ★ 破關結局彈窗 ★ -->
+    <div id="modal-game-clear" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[350] flex items-center justify-center p-4 hidden">
+        <div class="bg-[#e6d3af] bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] border-4 border-amber-700 w-full max-w-lg rounded-xl p-8 text-center shadow-[0_0_50px_rgba(217,119,6,0.6)] text-[#3e2723]">
+            <div class="text-sm tracking-[0.3em] text-[#8b0000] font-bold mb-2">CONGRATULATIONS</div>
+            <h2 class="text-4xl font-black tracking-widest mb-4 calligraphy text-[#3e2723]">時空歸位・破關成功</h2>
+            <p class="text-base leading-relaxed font-serif font-bold text-justify bg-white/40 p-4 rounded border border-[#a37c4d] mb-6">
+                筆鋒落下，所有塵封的記憶終於拼湊完整。<br><br>
+                一陣溫暖的光芒包圍了你，咖啡香再度縈繞鼻尖。你猛然睜開雙眼，發現自己正趴在多那之咖啡廳的桌上，手機螢幕還停留在歷史資料的頁面……那些鬢香雲影的風華記憶，已深深烙印在你的心中。
+            </p>
+            <div id="clear-time-record" class="text-sm font-bold text-[#5a3c28] mb-6"></div>
+            <button onclick="finishGameToHome()" class="ui-btn px-8 py-3 rounded-full text-lg font-bold tracking-widest">
+                返回章節選單
+            </button>
+        </div>
+    </div>
+	<!-- ★ 時間到：失敗結局彈窗 ★ -->
+<div id="modal-game-over" class="fixed inset-0 bg-black/95 backdrop-blur-md z-[400] flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-950 border-4 border-red-900 w-full max-w-lg rounded-xl p-8 text-center shadow-[0_0_60px_rgba(153,27,27,0.8)] text-red-100">
+        <div class="text-sm tracking-[0.3em] text-red-500 font-bold mb-2">TIME IS UP</div>
+        <h2 class="text-4xl font-black tracking-widest mb-6 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">時空封鎖</h2>
+        <p class="text-xl leading-relaxed font-serif font-bold tracking-widest text-stone-200 bg-black/60 p-6 rounded border border-red-900/60 mb-8">
+            你將永遠困在這個時空……
+        </p>
+        <div class="flex justify-center gap-4">
+            <button onclick="document.getElementById('modal-game-over').classList.add('hidden'); restartGame();" class="ui-btn px-8 py-3 rounded-full text-lg font-bold tracking-widest border-2 border-red-700">
+                重新挑戰
+            </button>
+            <button onclick="document.getElementById('modal-game-over').classList.add('hidden'); goHome();" class="px-6 py-3 rounded-full text-lg font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-600 transition">
+                返回選單
+            </button>
+        </div>
+    </div>
+</div>
+<!-- ★ 獲得線索／道具 領取確認視窗 ★ -->
+    <div id="claim-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[380] flex items-center justify-center p-4 hidden">
+        <div class="bg-[#e6d3af] bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] border-4 border-[#5a3c28] w-full max-w-md rounded-xl p-6 text-center shadow-[0_0_40px_rgba(0,0,0,0.9)] text-[#3e2723] relative">
+            <div id="claim-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold tracking-widest mb-3 bg-[#8b0000] text-[#e2cda6]">
+                獲得新線索
+            </div>
+            <div class="w-20 h-20 mx-auto my-2 rounded-full border-4 border-[#a37c4d] bg-[#d4b886]/70 flex items-center justify-center shadow-inner">
+                <i id="claim-icon" class="fas fa-book-open text-3xl text-[#5a3c28]"></i>
+            </div>
+            <h3 id="claim-name" class="text-2xl font-black text-[#3e2723] mt-3 mb-2"></h3>
+            <p id="claim-desc" class="text-sm leading-relaxed font-serif text-[#4a2e1b] bg-white/40 p-3 rounded border border-[#a37c4d] mb-5 text-justify"></p>
+            <button onclick="confirmClaimItem()" class="w-full py-3 bg-[#8b0000] hover:bg-red-800 text-[#e2cda6] text-lg font-bold rounded-lg tracking-widest transition shadow-lg border border-[#5a3c28]">
+                <i class="fas fa-hand-holding mr-2"></i><span id="claim-btn-text">領取並收錄</span>
+            </button>
+        </div>
+    </div>
+    <!-- ★ 背景音樂與音效載體 ★ -->
+    <audio id="bg-music" loop autoplay>
+        <source src="背景音樂.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-tick">
+        <source src="倒數音效.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-typewriter" loop>
+        <source src="打字音效.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-warning60">
+        <source src="最後60秒音效.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-shatter">
+        <source src="碎玻璃音效.mp3" type="audio/mpeg">
+    </audio>
+	<audio id="sfx-timereset">
+        <source src="時空倒轉音效.mp3" type="audio/mpeg">
+    </audio>
+	<audio id="sfx-light">
+    <source src="開燈音效.mp3" type="audio/mpeg">
+   </audio>
+   <audio id="sfx-door">
+        <source src="開門音效.mp3" type="audio/mpeg">
+    </audio>
+	<audio id="sfx-fail">
+    <source src="失敗音效.mp3" type="audio/mpeg">
+</audio>
+    
+</div>
+
+<script src="script.js"></script><script src="script.js?v=2"></script>
+</body>
+</html>

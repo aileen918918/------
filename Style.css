@@ -1,0 +1,893 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+
+:root {
+    --bg-dark: #1a1311;
+    --primary-brown: #3e2723;
+    --accent-red: #8b0000;
+    --text-vintage: #e2cda6;
+    --paper-bg: #d4b886;
+}
+
+body {
+    background-color: #000;
+    font-family: 'Noto Serif TC', serif;
+    color: var(--text-vintage);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100dvh; /* 改用 100dvh 避免被手機網址列裁切 */
+    overflow: hidden;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    max-width: 1280px;
+    aspect-ratio: 16 / 9;
+    background: radial-gradient(circle, #3a251c 0%, #150d0a 100%);
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    overflow: hidden;
+    border: 2px solid #5a3c28;
+}
+
+#game-container::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 10;
+}
+
+.scene {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    background-size: cover;
+    background-position: center;
+}
+
+.scene.active { display: flex; opacity: 1; }
+
+#scene-home { background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('藝旦在筵席彈唱.jpg'); }
+#scene-level-select { background: radial-gradient(circle at center, #3a251c 0%, #0a0505 100%); }
+#scene-cafe { background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('多那之咖啡廳.jpg'); }
+#scene-wedding { background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('婚紗店.jpeg'); }
+#scene-map-puzzle { background: radial-gradient(circle at center, #d4b886 0%, #3a251c 100%); }
+#scene-room1 { background-image: url('寶美樓場景.jpeg'); }
+#scene-room2 { background: radial-gradient(circle at center, #351c1c 0%, #0a0505 100%); }
+
+.title-glow { text-shadow: 0 0 10px rgba(226, 205, 166, 0.5), 0 0 20px rgba(139, 0, 0, 0.8); }
+
+#dialog-box {
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 85%;
+    height: 25%;
+    background: rgba(30, 20, 15, 0.9);
+    border: 2px solid var(--accent-red);
+    border-radius: 8px;
+    padding: 20px;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 50; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+}
+
+.dialog-text { font-size: 1.25rem; line-height: 1.6; letter-spacing: 2px; }
+.text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+.typewriter-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.2em;
+    background-color: var(--text-vintage);
+    vertical-align: bottom;
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.ui-btn {
+    background: linear-gradient(to bottom, #5a3c28, #3e2723);
+    border: 1px solid #7d593c;
+    color: var(--text-vintage);
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+}
+.ui-btn:hover {
+    background: linear-gradient(to bottom, #6d4b35, #4e322b);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.6);
+}
+.ui-btn:active { transform: translateY(0); }
+
+.level-card { transition: all 0.3s ease; }
+.level-card.locked { filter: grayscale(80%) brightness(0.6); pointer-events: none; }
+.level-card.locked .lock-overlay { display: flex; }
+.level-card:not(.locked) .lock-overlay { display: none; }
+.level-card:not(.locked):hover { transform: translateY(-10px) scale(1.05); box-shadow: 0 10px 25px rgba(226, 205, 166, 0.5); }
+
+.modal {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 70%; max-height: 80%;
+    background: url('https://www.transparenttextures.com/patterns/aged-paper.png'), #d4b886;
+    color: #2b1b12;
+    border: 4px solid #5a3c28;
+    border-radius: 12px;
+    padding: 24px;
+    z-index: 30;
+    display: none;
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+    overflow-y: auto;
+}
+
+.photo-modal-style {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    width: auto !important;
+    overflow: visible !important;
+}
+.photo-modal-style.active { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+.modal.active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.modal-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 25;
+    display: none;
+}
+.modal-overlay.active { display: block; }
+
+.interactable { cursor: pointer; transition: all 0.3s; }
+
+#puzzle-input-container, #luo-input-container, #xie-input-container {
+    display: none;
+    background: rgba(30, 20, 15, 0.95);
+    border: 2px solid #a37c4d;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+::-webkit-scrollbar-thumb { background: #5a3c28; border-radius: 4px; }
+
+@keyframes fallDown {
+    0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+    10% { opacity: 1; }
+    100% { transform: translateY(250px) rotate(-15deg) scale(1); opacity: 1; }
+}
+.animate-fall { display: block !important; animation: fallDown 1.5s ease-in forwards; }
+
+.slider {
+    -webkit-appearance: none;
+    height: 8px;
+    background: #e8dcb8;
+    border: 1px solid #5a3c28;
+    border-radius: 4px;
+    outline: none;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3e2723;
+    cursor: pointer;
+    border: 2px solid #e2cda6;
+}
+
+/* ==================== 詩箋解謎共通樣式 ==================== */
+.calligraphy { font-family: 'Ma Shan Zheng', cursive; }
+.paper-board {
+    background-color: #ebdcc4;
+    background-image: radial-gradient(#d1bfa2 1.2px, transparent 1.2px);
+    background-size: 16px 16px;
+    box-shadow: inset 0 0 30px rgba(110, 75, 40, 0.4), 0 10px 25px rgba(0, 0, 0, 0.85);
+}
+
+@keyframes goldGlow {
+    0%, 100% { filter: drop-shadow(0 0 6px #f59e0b) drop-shadow(0 0 15px #f59e0b); }
+    50% { filter: drop-shadow(0 0 14px #fbbf24) drop-shadow(0 0 28px #d97706); }
+}
+.target-glow {
+    animation: goldGlow 1.4s infinite ease-in-out;
+    color: #78350f !important;
+    background-color: #fef08a !important;
+    border-color: #d97706 !important;
+    font-weight: 900;
+    z-index: 25;
+    position: relative;
+}
+
+/* ----- 連雅堂方塊 ----- */
+.block-cell {
+    background: linear-gradient(135deg, #3d1b13 0%, #1c0a07 100%);
+    border: 1px solid #5a281a;
+    box-shadow: inset 1px 1px 2px rgba(255,255,255,0.12), inset -1px -1px 2px rgba(0,0,0,0.6);
+    box-sizing: border-box;
+}
+.tetris-piece {
+    position: absolute;
+    cursor: grab;
+    z-index: 40;
+    display: grid;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+    touch-action: none;
+}
+.tetris-piece:active {
+    cursor: grabbing;
+    filter: drop-shadow(0 8px 16px rgba(217, 119, 6, 0.5));
+    z-index: 60;
+}
+.piece-docked .block-cell {
+    background: linear-gradient(135deg, #240e08 0%, #100503 100%);
+    border: 1px solid #3d1a11;
+}
+
+/* ----- 羅秀惠賓果格 ----- */
+.bingo-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 16px;
+    color: #3e2723;
+}
+.bingo-crossed::after {
+    content: '';
+    position: absolute;
+    left: -2px; right: -2px; top: 50%;
+    height: 2px;
+    background-color: #3e2723;
+    transform: translateY(-50%);
+}
+.bingo-interactable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.bingo-interactable:hover {
+    background-color: rgba(217, 119, 6, 0.2);
+}
+.bingo-circled::before {
+    content: '';
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border: 3px solid #b91c1c; 
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+/* ----- 謝介石護照槽 ----- */
+.passport-slot {
+    width: 80px; height: 112px;
+    border: 2px dashed rgba(226, 205, 166, 0.5);
+    border-radius: 8px;
+    display: flex; justify-content: center; align-items: center;
+    background-color: rgba(0,0,0,0.5);
+    color: rgba(226, 205, 166, 0.5);
+    font-weight: bold;
+    font-size: 24px;
+}
+.passport-item {
+    position: absolute;
+    width: 80px; height: 112px;
+    cursor: grab;
+    z-index: 40;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.8);
+    transition: transform 0.1s ease;
+    border-radius: 6px;
+}
+.passport-item:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+    z-index: 60;
+}
+
+/* ★ 新增：史料文字文件樣式 ★ */
+.historical-doc {
+    background-color: #e6d3af;
+    background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+    color: #3e2723;
+    padding: 30px 40px;
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(90, 60, 40, 0.3);
+    max-width: 500px;
+    max-height: 75vh;
+    overflow-y: auto;
+    border: 1px solid #b59b74;
+}
+/* ----- 上菜解謎專用樣式 ----- */
+.dish-btn {
+    background: linear-gradient(to bottom, #2b1b12, #1a0f0a);
+    border: 2px solid #5a3c28;
+    color: #e2cda6;
+    border-radius: 8px;
+    padding: 12px 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+}
+.dish-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #4a2e1b, #2b1b12);
+    border-color: #a37c4d;
+    transform: translateY(-2px);
+}
+.dish-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+.dish-on-table {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.8);
+    border: 3px solid #e2cda6;
+}
+/* ==================== 最終章考卷樣式 ==================== */
+.exam-paper {
+    background-color: #ebe0c9;
+    background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+    border: 4px solid #5a3c28;
+    box-shadow: inset 0 0 40px rgba(90, 60, 40, 0.25), 0 15px 35px rgba(0, 0, 0, 0.9);
+    font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif !important;
+    letter-spacing: 0.06em;
+}
+
+#final-exam-body {
+    font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif !important;
+}
+
+.exam-paper h2,
+.exam-paper h3 {
+    font-family: 'Noto Serif TC', serif !important;
+    letter-spacing: 0.1em;
+}
+
+.exam-blank {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.55);
+    border: none;
+    border-bottom: 2px solid #5a3c28;
+    border-radius: 4px 4px 0 0;
+    color: #3e2723;
+    font-weight: 700;
+    text-align: center;
+    padding: 0 6px;
+    margin: 0 3px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif !important;
+}
+.exam-blank:focus {
+    outline: none;
+    background: rgba(254, 243, 199, 0.9);
+    border-bottom-color: #d97706;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.exam-blank.blank-correct {
+    background: rgba(220, 252, 231, 0.85);
+    border-bottom: 2px solid #15803d;
+    color: #166534;
+}
+
+.exam-blank.blank-wrong {
+    background: rgba(254, 226, 226, 0.9);
+    border-bottom: 2px solid #b91c1c;
+    color: #991b1b;
+}
+.exam-blank::placeholder {
+    color: rgba(90, 60, 40, 0.45);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+/* ==================== 修正層級：確保筆記本與道具欄永遠在最上層 ==================== */
+.scene {
+    z-index: 1 !important; /* 把所有場景內的方塊、考核按鈕、護照都鎖在底層 */
+}
+
+#ui-layer {
+    z-index: 200 !important;
+}
+
+.modal-overlay {
+    z-index: 300 !important;
+}
+
+.modal,
+#notebook-modal,
+#inventory-modal {
+    z-index: 310 !important;
+}
+
+#photo-modal {
+    z-index: 320 !important;
+}
+
+#notification {
+    z-index: 400 !important;
+}
+/* ==================== 時空重置特效 ==================== */
+@keyframes time-warp-flash {
+    0% { filter: brightness(1) blur(0px); transform: scale(1); }
+    40% { filter: brightness(2.2) blur(4px) saturate(0.2); transform: scale(1.06); }
+    70% { filter: brightness(3.5) blur(8px); transform: scale(1.12); }
+    100% { filter: brightness(1) blur(0px); transform: scale(1); }
+}
+.animate-time-warp {
+    animation: time-warp-flash 2.6s ease-in-out forwards;
+}
+/* ==================== 藝旦間擬真暗室效果 ==================== */
+#yidan-dark-overlay {
+    background: radial-gradient(
+        circle at 48% 45%,
+        rgba(8, 10, 18, 0.58) 0%,
+        rgba(5, 6, 12, 0.80) 48%,
+        rgba(0, 0, 0, 0.96) 100%
+    );
+    backdrop-filter: brightness(0.42) contrast(1.15) saturate(0.35);
+    -webkit-backdrop-filter: brightness(0.42) contrast(1.15) saturate(0.35);
+}
+#passport-detail-modal,
+#hint-modal {
+    z-index: 330 !important;
+}
+
+/* 讓上方 UI 列的空白處不會擋住底下的點擊 */
+#ui-layer {
+    pointer-events: none;
+}
+#ui-layer button,
+#ui-layer #timer-container {
+    pointer-events: auto;
+}
+/* ==================== 修正喊拳與勝負動畫層級：顯示在計時器上層 ==================== */
+#fist-showdown-area {
+    z-index: 260 !important;
+}
+
+#fist-result-area {
+    z-index: 270 !important;
+}
+/* ==================== 計時器置於文字下層 ==================== */
+.scene {
+    z-index: auto !important;
+}
+
+#ui-layer {
+    z-index: auto !important;
+    pointer-events: none;
+}
+
+/* 左右按鈕（返回、首頁、音效、筆記本、道具欄）維持在上層 */
+#ui-layer > div:first-child,
+#ui-layer > div:last-child {
+    position: relative;
+    z-index: 200;
+    pointer-events: auto;
+}
+
+/* 計時器放低於題目文字(z-20)與對話框(z-50)的下層 */
+#timer-container {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+}
+	/* ==================== 十六宮格記憶力挑戰 3D 翻牌（立體強化版） ==================== */
+.memory-card {
+    perspective: 700px; /* 景深拉近，3D 翻轉角度更立體 */
+    cursor: pointer;
+    height: 100%;
+    min-height: 95px;
+    background: transparent;
+}
+
+.memory-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+/* 滑鼠移上去微幅浮起，像準備抽牌 */
+.memory-card:hover:not(.flipped):not(.matched) .memory-card-inner {
+    transform: translateY(-4px) rotateX(6deg);
+}
+
+/* 翻到正面 */
+.memory-card.flipped .memory-card-inner,
+.memory-card.matched .memory-card-inner {
+    transform: rotateY(180deg);
+}
+
+.memory-card-back,
+.memory-card-front {
+    position: absolute !important; /* 避免被 Tailwind 的 relative 蓋掉 */
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* 蓋牌背面（明確指定 0deg 防止瀏覽器破圖） */
+.memory-card-back {
+    transform: rotateY(0deg);
+    background: linear-gradient(135deg, #4a2e20 0%, #1c100d 100%);
+    border: 2px solid #a37c4d;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+
+.memory-card:hover:not(.flipped):not(.matched) .memory-card-back {
+    border-color: #f59e0b;
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
+}
+
+/* 翻開正面 */
+.memory-card-front {
+    transform: rotateY(180deg);
+    background-color: #f4e8d3;
+    background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+    border: 2px solid #a37c4d;
+    color: #3e2723;
+    padding: 0.45rem 0.55rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.memory-card.card-name .memory-card-front {
+    background-color: #e6cfa3;
+    border-color: #8b0000;
+    align-items: center;
+    text-align: center;
+}
+
+.memory-card.matched .memory-card-front {
+    border: 3px solid #16a34a;
+    box-shadow: 0 0 15px rgba(22, 163, 74, 0.6);
+    opacity: 0.88;
+}
+
+.memory-card.mismatched .memory-card-front {
+    border: 3px solid #dc2626;
+    box-shadow: 0 0 18px rgba(220, 38, 38, 0.9);
+}
+/* ==================== 王香禪拼圖進度顯示機制 ==================== */
+#portrait-progress-widget {
+    position: absolute;
+    top: 5.2rem;
+    right: 1rem;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(26, 19, 17, 0.88);
+    border: 2px solid #a37c4d;
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75);
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#portrait-progress-widget.hidden {
+    display: none !important;
+}
+
+#portrait-progress-widget:hover {
+    border-color: #f59e0b;
+    transform: translateY(-2px);
+}
+
+/* 點擊放大到畫面中央檢視 */
+#portrait-progress-widget.zoomed {
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%) scale(1);
+    z-index: 340;
+    padding: 14px;
+    border-width: 3px;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.72), 0 15px 40px rgba(0, 0, 0, 0.9);
+}
+
+.portrait-frame {
+    position: relative;
+    width: 84px;
+    height: 112px;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid #5a3c28;
+    background-color: #120c0a;
+    transition: width 0.35s ease, height 0.35s ease;
+}
+
+#portrait-progress-widget.zoomed .portrait-frame {
+    width: 270px;
+    height: 360px;
+}
+
+/* 3x3 拼圖遮罩網格 */
+.portrait-mask-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+}
+
+.portrait-mask-tile {
+    background: linear-gradient(135deg, #2b1b12 0%, #140c09 100%);
+    border: 1px solid rgba(163, 124, 77, 0.35);
+    box-sizing: border-box;
+    opacity: 0.96;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.portrait-mask-tile.revealed {
+    opacity: 0;
+    transform: scale(0.85);
+    pointer-events: none;
+}
+
+.portrait-progress-label {
+    margin-top: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #e2cda6;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+#portrait-progress-widget.zoomed .portrait-progress-label {
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+/* 最終章拼圖完整時的金色微光 */
+#portrait-progress-widget.complete {
+    border-color: #fbbf24;
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.65);
+}
+
+#portrait-progress-widget.complete .portrait-progress-label {
+    color: #fde68a;
+}
+/* ==================== 手機版響應式優化 ==================== */
+@media (max-width: 900px), (max-height: 550px) {
+    /* 1. 遊戲容器改為滿版，不再被 16:9 壓扁 */
+    #game-container {
+        width: 100vw;
+        height: 100dvh;
+        max-width: none;
+        aspect-ratio: auto;
+        border: none;
+    }
+
+    /* 2. 封面與章節選單微調 */
+    #scene-home h1 {
+        font-size: 2.25rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+    #scene-home button {
+        font-size: 1.1rem !important;
+        padding: 0.6rem 1.4rem !important;
+    }
+    #scene-level-select {
+        justify-content: flex-start;
+        padding-top: 2rem;
+        overflow-y: auto;
+    }
+    #scene-level-select h2 {
+        font-size: 2rem !important;
+        margin-bottom: 1.2rem !important;
+    }
+    .level-card {
+        width: 7.5rem !important;
+        height: 9.5rem !important;
+    }
+    .level-card span:first-child {
+        font-size: 1.35rem !important;
+    }
+
+    /* 3. 頂部 UI 列縮小，避免左右按鈕與計時器重疊 */
+    #ui-layer {
+        top: 0.5rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        gap: 0.25rem;
+    }
+    #ui-layer > div {
+        gap: 0.35rem !important;
+    }
+    #ui-layer .ui-btn {
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.78rem !important;
+    }
+    #timer-container {
+        padding: 0.2rem 0.5rem !important;
+    }
+    #timer-container span {
+        font-size: 0.7rem !important;
+    }
+    #timer-container .w-48 {
+        width: 5.5rem !important;
+        height: 0.5rem !important;
+    }
+
+    /* 4. 王香禪拼圖進度框縮小 */
+    #portrait-progress-widget {
+        top: 3.8rem;
+        right: 0.5rem;
+        padding: 4px;
+    }
+    .portrait-frame {
+        width: 52px;
+        height: 70px;
+    }
+    .portrait-progress-label {
+        font-size: 9px;
+    }
+    #portrait-progress-widget.zoomed .portrait-frame {
+        width: 210px;
+        height: 280px;
+    }
+
+    /* 5. 對話框改為自動撐高並可捲動 */
+    #dialog-box {
+        width: 94%;
+        height: auto;
+        min-height: 24%;
+        max-height: 42%;
+        bottom: 2.5%;
+        padding: 12px 14px;
+        overflow-y: auto;
+    }
+    .dialog-text {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        letter-spacing: 1px;
+    }
+
+    /* 6. 筆記本、道具欄、密碼彈窗加寬 */
+    .modal {
+        width: 94%;
+        max-height: 86%;
+        padding: 14px;
+    }
+    #puzzle-input-container,
+    #luo-input-container,
+    #general-input-container,
+    #yidan-input-container,
+    #assessment1-input-container,
+    #assessment2-puzzle-container,
+    #fist-game-container {
+        width: 92vw !important;
+        max-height: 85dvh;
+        overflow-y: auto;
+        padding: 1.25rem !important;
+    }
+
+    /* 7. 解謎場景允許上下捲動，避免小螢幕被裁切 */
+    #scene-map-puzzle,
+    #scene-poem-puzzle,
+    #scene-luo-puzzle,
+    #scene-xie-puzzle,
+    #scene-serving,
+    #scene-memory-puzzle {
+        justify-content: flex-start;
+        overflow-y: auto;
+        padding-top: 3.8rem;
+        padding-bottom: 1.5rem;
+    }
+
+    /* 8. 羅秀惠賓果格縮小 */
+    .bingo-cell {
+        width: 34px;
+        height: 34px;
+        font-size: 13px;
+    }
+    .bingo-circled::before {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* 9. 謝介石護照槽與護照縮小，5 格可完整並排 */
+    #xie-slots-container {
+        gap: 0.4rem !important;
+        padding: 0.75rem !important;
+    }
+    .passport-slot,
+    .passport-item {
+        width: 56px;
+        height: 78px;
+        font-size: 18px;
+    }
+
+    /* 10. 江山樓上菜解謎：手機改為上下排版 */
+    #scene-serving > div:nth-child(2) {
+        position: static !important;
+        flex-direction: column !important;
+        width: 100%;
+        height: auto !important;
+        padding: 1rem !important;
+    }
+    #scene-serving > div:nth-child(2) > div {
+        width: 100% !important;
+        height: auto !important;
+    }
+    #scene-serving .rounded-full.bg-\[\#2a1b12\] {
+        width: 260px !important;
+        height: 260px !important;
+    }
+    #scene-serving [id^="table-dish-"] {
+        width: 4rem !important;
+        height: 4rem !important;
+    }
+
+    /* 11. 十六宮格卡片字體與高度微調 */
+    .memory-card {
+        min-height: 105px;
+    }
+    #scene-memory-puzzle > div {
+        padding-top: 0.5rem !important;
+        height: auto !important;
+    }
+
+    /* 12. 最終章考卷滿版好閱讀 */
+    #scene-final > div {
+        padding-top: 4rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    #final-exam-body {
+        padding: 1rem !important;
+        font-size: 0.95rem !important;
+        line-height: 2.1 !important;
+    }
+}

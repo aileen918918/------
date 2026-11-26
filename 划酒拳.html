@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時空解謎：藝旦間的試煉</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+        canvas {
+            border: 2px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="1200" height="675"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- 遊戲狀態 ---
+let gameState = "DIALOGUE"; // DIALOGUE: 對話, GAME: 猜拳, WIN: 勝利, LOSE: 失敗
+let countdownTime = 3568;   // 59:28 的總秒數 (3568秒)
+let gameRound = 1;
+let playerFinger = 0;
+let npcFinger = 0;
+let actualTotal = 0;
+
+const npcText = "[NPC]\n來到藝旦間，若想拿到線索【卡片1】，便與我玩一把「猜拳」吧！\n請點擊左方放大鏡【調查此處】開始划拳試煉。";
+
+// --- 互動區域定義 ---
+const searchSpot = { x: 250, y: 300, radius: 30, label: "調查此處" };
+const fingerButtons = [];
+for (let i = 0; i <= 5; i++) {
+    fingerButtons.push({
+        num: i,
+        x: 400 + (i * 75),
+        y: 535,
+        width: 60,
+        height: 35,
+        label: i + " 根"
+    });
+}
+const dialogueRect = { x: 50, y: canvas.height - 180, width: canvas.width - 100, height: 150 };
+
+// --- 載入素材 ---
+const imgBg = new Image();
+imgBg.src = '藝旦間.jpeg';
+
+const imgCharacter = new Image();
+imgCharacter.src = '角色.png';
+
+// 素材防錯機制 (如果圖檔不存在，使用替代色塊渲染)
+let bgLoaded = false;
+let charLoaded = false;
+imgBg.onload = () => bgLoaded = true;
+imgCharacter.onload = () => charLoaded = true;
+
+// 每秒計時器倒數
+setInterval(() => {
+    if (countdownTime > 0) countdownTime--;
+}, 1000);
+
+// --- 輔助函式：繪製多行文字 ---
+function drawTextMultiline(text, x, y, color, font, lineHeight = 28) {
+    ctx.fillStyle = color;
+    ctx.font = font;
+    const lines = text.split('\n');
+    lines.forEach((line, index) => {
+        ctx.fillText(line, x, y + (index * lineHeight));
+    });
+}
+
+// --- 核心遊戲渲染迴圈 ---
+function gameLoop() {
+    // 1. 清空畫布並繪製背景
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (bgLoaded) {
+        ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
+    } else {
+        ctx.fillStyle = "#281914"; // 暗色復古背景替代色
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 2. 繪製角色 (置中偏下)
+    if (charLoaded) {
+        ctx.drawImage(imgCharacter, canvas.width / 2 - 175, canvas.height - 530, 350, 500);
+    } else {
+        ctx.fillStyle = "rgba(150, 150, 150, 0.5)"; // 角色位置替代灰色區塊
+        ctx.fillRect(canvas.width / 2 - 100, canvas.height - 450, 200, 420);
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px Microsoft JhengHei";
+        ctx.fillText("[ 角色.png ]", canvas.width / 2 - 50, canvas.height - 240);
+    }
+
+    // 3. 還原圖一 UI 頂欄：剩餘時間進度條
+    ctx.fillStyle = "#1e0f0a";
+    ctx.fillRect(450, 15, 300, 45);
+    // 進度條比例
+    ctx.fillStyle = "#daa520"; // 金黃色
+    ctx.fillRect(455, 40, 290 * (countdownTime / 3568), 12);
+    // 文字
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 14px Microsoft JhengHei";
+    ctx.fillText("剩餘時間", 570, 32);
+    
+    let mins = Math.floor(countdownTime / 60);
+    let secs = countdownTime % 60;
+    let timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    ctx.fillText(timeStr, 582, 68);
+
+    // 右上角功能鈕 (筆記本、道具欄)
+    ctx.fillStyle = "#28140f";
+    ctx.fillRect(980, 20, 90, 35);
+    ctx.fillRect(1085, 20, 90, 35);
+    ctx.fillStyle = "#fff";
+    ctx.font = "14px Microsoft JhengHei";
+    ctx.fillText("📓 筆記本", 995, 42);
+    ctx.fillText("🧳 道具欄", 1100, 42);
+
+    // 4. 繪製互動探索圖示 (調查此處)
+    if (gameState === "DIALOGUE") {
+        ctx.beginPath();
+        ctx.arc(searchSpot.x, searchSpot.y, searchSpot.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "#daa520";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = "rgba(218, 165, 32, 0.2)";
+        ctx.fill();
+        
+        // 放大鏡圖示中心符號 🔍
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 20px Microsoft JhengHei";
+        ctx.fillText("🔍", searchSpot.x - 12, searchSpot.y + 7);
+        
+        ctx.font = "14px Microsoft JhengHei";
+        ctx.fillText(searchSpot.label, searchSpot.x - 28, searchSpot.y + 50);
+    }
+
+    // 5. 繪製底部半透明暗紅對話框
+    ctx.fillStyle = "rgba(20, 10, 10, 0.85)";
+    ctx.fillRect(dialogueRect.x, dialogueRect.y, dialogueRect.width, dialogueRect.height);
+    ctx.strokeStyle = "#c81e1e"; // 暗紅色邊框
+    ctx.lineWidth = 2;
+    ctx.strokeRect(dialogueRect.x, dialogueRect.y, dialogueRect.width, dialogueRect.height);
+
+    // 6. 依據遊戲狀態渲染對話與划拳互動內容
+    if (gameState === "DIALOGUE") {
+        drawTextMultiline(npcText, 80, canvas.height - 140, "#fff", "20px Microsoft JhengHei");
+    } 
+    else if (gameState === "GAME") {
+        let gameInstruction = `[ 猜拳第 ${gameRound} 回合 ]\n請選擇你這次要伸出的手指數量（電腦將隨心出拳，系統會根據圖二結算總數）：`;
+        drawTextMultiline(gameInstruction, 80, canvas.height - 145, "#fff", "18px Microsoft JhengHei");
+
+        // 渲染 0-5 根手指按鈕
+        fingerButtons.forEach(btn => {
+            ctx.fillStyle = "#daa520";
+            ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+            ctx.fillStyle = "#000";
+            ctx.font = "bold 14px Microsoft JhengHei";
+            ctx.fillText(btn.label, btn.x + 12, btn.y + 22);
+        });
+    } 
+    else if (gameState === "WIN") {
+        let winText = "[ NPC ]\n精彩！你竟然成功看穿了我的出拳規律！\n恭喜獲得關鍵線索：【卡片1】、【卡片2】。你已成功打破這個時空的束縛。";
+        drawTextMultiline(winText, 80, canvas.height - 140, "#daa520", "20px Microsoft JhengHei");
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px Microsoft JhengHei";
+        ctx.fillText("➔ 點擊任意處重新開始", 1020, canvas.height - 50);
+    } 
+    else if (gameState === "LOSE") {
+        let loseText = `[ NPC ]\n不對不對，剛剛我伸出了 ${npcFinger} 根，加上你出的 ${playerFinger} 根，總共是 ${actualTotal}！\n差了一點點，再來一把？`;
+        drawTextMultiline(loseText, 80, canvas.height - 145, "#c81e1e", "19px Microsoft JhengHei");
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px Microsoft JhengHei";
+        ctx.fillText("➔ 點擊對話框重新挑戰", 1020, canvas.height - 50);
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// --- 7. 滑鼠點擊點觸控監聽器 ---
+canvas.addEventListener('mousedown', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (gameState === "DIALOGUE") {
+        // 偵測是否點擊放大鏡 (調查此處)
+        const dist = Math.sqrt((mouseX - searchSpot.x)**2 + (mouseY - searchSpot.y)**2);
+        if (dist <= searchSpot.radius) {
+            gameState = "GAME";
+        }
+    } 
+    else if (gameState === "GAME") {
+        // 偵測是否點擊 0~5 的手指按鈕
+        fingerButtons.forEach(btn => {
+            if (mouseX >= btn.x && mouseX <= btn.x + btn.width &&
+                mouseY >= btn.y && mouseY <= btn.y + btn.height) {
+                
+                playerFinger = btn.num;
+                npcFinger = Math.floor(Math.random() * 6); // NPC 隨機出 0-5 根
+                actualTotal = playerFinger + npcFinger;
+
+                // 核心划拳勝負判定 (呼應圖二：預測總數，這裡設計模擬玩家有 20% 機率猜中總數)
+                let isPlayerPredictCorrect = Math.random() < 0.25;
+
+                if (isPlayerPredictCorrect) {
+                    gameState = "WIN";
+                } else {
+                    gameState = "LOSE";
+                }
+            }
+        });
+    } 
+    else if (gameState === "LOSE") {
+        // 點擊對話框重玩
+        if (mouseX >= dialogueRect.x && mouseX <= dialogueRect.x + dialogueRect.width &&
+            mouseY >= dialogueRect.y && mouseY <= dialogueRect.y + dialogueRect.height) {
+            gameRound++;
+            gameState = "GAME";
+        }
+    }
+    else if (gameState === "WIN") {
+        // 獲勝後點擊任意處重置遊戲
+        gameState = "DIALOGUE";
+        gameRound = 1;
+        countdownTime = 3568;
+    }
+});
+
+// 啟動遊戲
+requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>

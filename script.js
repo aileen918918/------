@@ -2053,12 +2053,28 @@ function checkPuzzle() {
 function enterRoom1(isBack = false) { 
     switchScene('scene-room1', isBack);
     changeBGM('安平追想曲.mp3');
+
+    const room1 = document.getElementById('scene-room1');
+    const interactables = room1 ? room1.querySelector('.relative.w-full.h-full') : null;
+
     if (!isBack) {
+        // 對話跑完前：顯示指定背景，暫時隱藏調查點與鍵盤
+        if (room1) room1.style.backgroundImage = "url('寶美樓對話框跑完前.png')";
+        if (interactables) interactables.classList.add('hidden');
+
         document.getElementById('dialog-box').style.display = 'none';
         showCharacter('NPC1.png');
         setTimeout(() => {
-            startDialog('room1Intro', () => hideCharacter());
+            startDialog('room1Intro', () => {
+                hideCharacter();
+                // 對話結束後：切回 style.css 原本的「寶美樓場景.jpeg」並顯示調查點
+                if (room1) room1.style.backgroundImage = '';
+                if (interactables) interactables.classList.remove('hidden');
+            });
         }, 600);
+    } else {
+        if (room1) room1.style.backgroundImage = '';
+        if (interactables) interactables.classList.remove('hidden');
     }
 }
 function enterRoom2() { 

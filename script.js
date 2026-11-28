@@ -888,12 +888,19 @@ let assessment1Progress = parseInt(localStorage.getItem('unlockLostArtA1') || '0
 let assessment2Progress = parseInt(localStorage.getItem('unlockLostArtA2') || '0');
 let assessment3Progress = parseInt(localStorage.getItem('unlockLostArtA3') || '0');
 
+const sessionCleared = { 1: false, 2: false, 3: false, 4: false };
+
 function unlockNextLevel(targetLevel, unlockMsg) {
+    // 標記前一章已正式通關
+    if (targetLevel >= 2 && targetLevel <= 5) {
+        sessionCleared[targetLevel - 1] = true;
+    }
     if (state.unlockedLevel < targetLevel) {
         state.unlockedLevel = targetLevel;
         localStorage.setItem('unlockLostArtLevel', state.unlockedLevel);
         showNotification(unlockMsg);
     }
+    updateUIButtons();
 }
 
 function switchScene(sceneId, isBack = false) {
@@ -1059,34 +1066,36 @@ function goHome() {
 function goBack() {
     stopTypewriter();
     if (state.sceneHistory.length > 0) {
-        const previousScene = state.sceneHistory.pop(); 
+        const previousScene = state.sceneHistory.pop();
         clearTimeout(state.typingTimeout);
         state.isTyping = false;
         state.onDialogEnd = null;
         document.getElementById('dialog-box').style.display = 'none';
         hideCharacter(); closeAllModals(); hidePuzzle(); hideLuoInput(); hideGeneralInput();
-        
+
         const letter = document.getElementById('falling-letter');
         if (letter) { letter.classList.add('hidden'); letter.classList.remove('animate-fall'); }
 
         switch(previousScene) {
             case 'scene-home': switchScene('scene-home', true); break;
             case 'scene-level-select': enterLevelSelect(true); break;
-            case 'scene-cafe': switchScene('scene-cafe', true); startDialog('prologue'); break;
-            case 'scene-wedding':
-                switchScene('scene-wedding', true);
-                showCharacter('新郎新娘.png');
-                state.currentDialogSeq = scripts['prologue'];
-                state.dialogIndex = 2; 
-                document.getElementById('dialog-box').style.display = 'flex';
-                showCurrentDialog();
-                break;
+            case 'scene-cafe': switchScene('scene-cafe', true); break;
+            case 'scene-wedding': switchScene('scene-wedding', true); break;
             case 'scene-map-puzzle': enterMapPuzzle(true); break;
-            case 'scene-room1': switchScene('scene-room1', true); break;
+            case 'scene-room1':
+                enterRoom1(true); // isBack=true：直接顯示正常背景與調查點，不重跑對話
+                break;
             case 'scene-poem-puzzle': enterPoemPuzzle(true); break;
             case 'scene-luo-puzzle': enterLuoPuzzle(true); break;
             case 'scene-xie-puzzle': enterXiePuzzle(true); break;
-            case 'scene-room2': switchScene('scene-room2', true); break;
+            case 'scene-room2': {
+                const room2 = document.getElementById('scene-room2');
+                if (room2) {
+                    room2.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url('江山樓場景.jpeg')";
+                }
+                switchScene('scene-room2', true);
+                break;
+            }
             case 'scene-roof': switchScene('scene-roof', true); break;
             case 'scene-banquet': switchScene('scene-banquet', true); break;
             case 'scene-bath': switchScene('scene-bath', true); break;
@@ -1133,18 +1142,33 @@ function updateUIButtons() {
         }
     }
 
-    // 只要「下一章已解鎖」，就顯示「下一章」按鈕
+    // 必須「已解完當前章節」才顯示「下一章」按鈕
     if (nextBtn) {
         const currentChapter = getCurrentChapterLevel(state.currentScene);
-        if (currentChapter >= 1 && currentChapter < 5 && state.unlockedLevel > currentChapter) {
+        const canGoNext = isChapterSelectMode
+            ? !!sessionCleared[currentChapter]
+            : (state.unlockedLevel > currentChapter);
+
+      if (currentChapter >= 1 && currentChapter < 5 && canGoNext) {
             nextBtn.classList.remove('hidden');
         } else {
             nextBtn.classList.add('hidden');
         }
     }
-}
+} // ★ 補上這一個大括號！
+	
 
 function goNextChapter() {
+    const currentChapter = getCurrentChapterLevel(state.currentScene);
+    const canGoNext = isChapterSelectMode
+        ? !!sessionCleared[currentChapter]
+        : (state.unlockedLevel > currentChapter);
+
+    if (!canGoNext) {
+        showNotification("⚠️ 請先解完本章所有謎題，才能前往下一章！");
+        return;
+    }
+
     stopTypewriter();
     clearTimeout(state.typingTimeout);
     state.isTyping = false;
@@ -1156,11 +1180,10 @@ function goNextChapter() {
     hideLuoInput();
     hideGeneralInput();
 
-    const currentChapter = getCurrentChapterLevel(state.currentScene);
     if (currentChapter === 1) {
-        enterRoom1(); // ★ 改為呼叫 enterRoom1()
+        enterRoom1();
     } else if (currentChapter === 2) {
-        enterRoom2(); // ★ 改為呼叫 enterRoom2()
+        enterRoom2();
     } else if (currentChapter === 3) {
         if (isYidanLightOn) switchScene('scene-yidan');
         else enterYidanRoom();

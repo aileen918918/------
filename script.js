@@ -219,7 +219,7 @@ function startChapterSelect() {
     
     localStorage.removeItem('unlockLostArtNotebook');
     localStorage.removeItem('unlockLostArtInventory');
-    localStorage.removeItem('unlockLostArtTime');
+  
     localStorage.removeItem('unlockLostArtHints');
     localStorage.removeItem('unlockLostArtA1'); 
     localStorage.removeItem('unlockLostArtA2'); 
@@ -954,9 +954,20 @@ function enterLevelSelect(isBack = false) {
 
 function continueGame() {
     isChapterSelectMode = false;
-    if (state.timeRemaining < 3600) {
+
+    // 重新從 localStorage 讀取上次儲存的剩餘秒數
+    const savedTime = localStorage.getItem('unlockLostArtTime');
+    if (savedTime !== null && !isNaN(parseInt(savedTime, 10))) {
+        state.timeRemaining = parseInt(savedTime, 10);
+    }
+
+    updateTimerUI();
+
+    // 只要已經進入第一章（寶美樓）之後，或時間已經開始倒數過，就立刻接續計時
+    if (state.timeRemaining < 3600 || state.unlockedLevel >= 2) {
         startTimer();
     }
+
     enterLevelSelect();
 }
 

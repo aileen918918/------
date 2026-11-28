@@ -1037,7 +1037,7 @@ function startLevel(level) {
 
     if (level === 1) { switchScene('scene-cafe'); startDialog('prologue'); } 
     else if (level === 2) { enterRoom1(); } 
-    else if (level === 3) { switchScene('scene-room2'); startDialog('room2Intro'); } 
+    else if (level === 3) { enterRoom2(); }
     else if (level === 4) { enterYidanRoom(); }
     else if (level === 5) { enterFinalChapter(); }
 }
@@ -2079,7 +2079,26 @@ function enterRoom1(isBack = false) {
 }
 function enterRoom2() { 
     switchScene('scene-room2'); 
-    startDialog('room2Intro'); 
+
+    const room2 = document.getElementById('scene-room2');
+    const elDoc = document.getElementById('obj-jiangshan-doc');
+    const elPhoto = document.getElementById('obj-jiangshan-photo');
+
+    // 對話跑完前：顯示指定背景，並暫時隱藏大廳調查點
+    if (room2) {
+        room2.style.backgroundImage = "url('江山樓對話框跑完前.png')";
+    }
+    if (elDoc) elDoc.classList.add('hidden');
+    if (elPhoto) elPhoto.classList.add('hidden');
+
+    startDialog('room2Intro', () => {
+        hideCharacter();
+        // 對話結束後：切回原本的江山樓場景並顯示調查點
+        if (room2) {
+            room2.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url('江山樓場景.jpeg')";
+        }
+        syncCollectedDots();
+    });
 }
 
 // ==========================================

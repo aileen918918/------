@@ -1158,9 +1158,9 @@ function goNextChapter() {
 
     const currentChapter = getCurrentChapterLevel(state.currentScene);
     if (currentChapter === 1) {
-        switchScene('scene-room1');
+        enterRoom1(); // ★ 改為呼叫 enterRoom1()
     } else if (currentChapter === 2) {
-        switchScene('scene-room2');
+        enterRoom2(); // ★ 改為呼叫 enterRoom2()
     } else if (currentChapter === 3) {
         if (isYidanLightOn) switchScene('scene-yidan');
         else enterYidanRoom();
